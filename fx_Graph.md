@@ -1,0 +1,2 @@
+# `Node`, `Graph`, and `GraphModule`
+This documentation records what we learned from the design of `torch.fx.Graph`, `torch.fx.Node`. This should shed light on how we designed our `needle.Graph` and `needle.Node` module. 
