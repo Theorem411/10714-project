@@ -2,10 +2,10 @@
 This documentation records what we learned from `torch.fx.Tracer` and `torch.fx.symbolic_trace`. 
 
 # `Tracer.trace` workflow
-1.	Initialize a Tracer: An instance of the Tracer class is created.
-2.	Trace the Module/Function: The Tracer’s trace method is called with the module or function as an argument.
-3.	Create Graph Nodes: As the function or module is executed, the Tracer intercepts operations and creates nodes in the graph.
-4.	Return a GraphModule: A GraphModule is created using the traced graph and returned.
+1.	Initialize a `Tracer`: An instance of the `Tracer` class is created.
+2.	Trace the `Module`/`Function`: The Tracer’s `trace` method is called with the module or function as an argument.
+3.	Create Graph Nodes: As the function or module is executed, the `Tracer` intercepts operations and creates nodes in the graph.
+4.	Return a `GraphModule`: A `GraphModule` is created using the traced graph and returned.
 
 ## setup in the `trace` method
 Steps in the trace Method
@@ -19,11 +19,11 @@ Steps in the trace Method
 +	Unwraps the function to get to the innermost callable (handles decorators).
 +	Analyzes the function signature to prepare arguments.
 3.	Create Placeholders:
-+	Calls create_args_for_root to create placeholder nodes corresponding to the function’s arguments.
-+	Handles *args and **kwargs if present.
++	Calls `create_args_for_root` to create placeholder nodes corresponding to the function’s arguments.
++	Handles `*args` and `**kwargs` if present.
 4.	Set Up Patching:
 +	Patches certain methods to intercept calls to modules and functions.
-+	Overrides torch.nn.Module.__call__ and torch.nn.Module.__getattr__ to track module calls and attribute accesses.
++	Overrides `torch.nn.Module.__call__` and `torch.nn.Module.__getattr__` to track module calls and attribute accesses.
 5.	Execute the Function:
 +	Calls the function with the prepared arguments.
 +	As the function executes, operations are intercepted, and corresponding nodes are added to the graph.
@@ -33,12 +33,12 @@ Steps in the trace Method
 
 ## How Operations Are Intercepted
 
-+	`Proxy` Objects: The Tracer uses Proxy objects to wrap tensors and track operations performed on them.
++	`Proxy` Objects: The `Tracer` uses `Proxy` objects to wrap tensors and track operations performed on them.
 + Method Overriding: By overriding `__call__` and `__getattr__`, the `Tracer` intercepts calls to submodules and accesses to parameters/buffers.
 
 ## Inspecting and Parsing the forward Function
 
-When tracing an nn.Module, the Tracer needs to inspect and parse the forward method. Here’s how it does it:
+When tracing an `nn.Module`, the `Tracer` needs to inspect and parse the `forward` method. Here’s how it does it:
 
 Unwrapping the Function:
 + The trace method uses `inspect.unwrap` to remove any decorators and get to the original forward method.
@@ -57,17 +57,6 @@ sig = inspect.signature(fn_for_analysis)
 ```[python]
 def proxy_placeholder(name):
     return self._proxy_placeholder(name, concrete_args, sig, fn_for_analysis)
-```
-
-## Call function with proxy arguments
-```[python]
-self.create_node(
-    "output",
-    "output",
-    (self.create_arg(fn(*args)),),
-    {},
-    type_expr=fn.__annotations__.get("return", None),
-)
 ```
 
 ## Executing the Function with Proxies:

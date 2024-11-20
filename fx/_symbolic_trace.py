@@ -315,7 +315,7 @@ class Tracer(TracerBase):
     _qualname_counter: Dict[str, int] = collections.defaultdict(int)
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def get_fresh_qualname(self, prefix: str) -> str:
         """
         Gets a fresh name for a prefix and returns it. This function ensures
@@ -343,7 +343,7 @@ class Tracer(TracerBase):
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def create_arg(self, a: Any) -> "Argument":
         """
         A method to specify the behavior of tracing when preparing values to
@@ -430,7 +430,7 @@ class Tracer(TracerBase):
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def is_leaf_module(self, m: torch.nn.Module, module_qualified_name: str) -> bool:
         """
         A method to specify whether a given ``nn.Module`` is a "leaf" module.
@@ -457,7 +457,7 @@ class Tracer(TracerBase):
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def path_of_module(self, mod: torch.nn.Module) -> str:
         """
         Helper method to find the qualified name of ``mod`` in the Module hierarchy
@@ -486,7 +486,7 @@ class Tracer(TracerBase):
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def call_module(
         self,
         m: torch.nn.Module,
@@ -536,7 +536,7 @@ class Tracer(TracerBase):
 
 
 
-[docs]    @compatibility(is_backward_compatible=False)
+    @compatibility(is_backward_compatible=False)
     def getattr(self, attr: str, attr_val: Any, parameter_proxy_cache: Dict[str, Any]):
         """
         Method that specifies the behavior of this ``Tracer`` when we call getattr
@@ -601,7 +601,7 @@ class Tracer(TracerBase):
 
     # This method will be refactored
 
-[docs]    @compatibility(is_backward_compatible=False)
+    @compatibility(is_backward_compatible=False)
     def create_args_for_root(self, root_fn, is_module, concrete_args=None):
         """
         Create ``placeholder`` nodes corresponding to the signature of the ``root``
@@ -700,7 +700,7 @@ class Tracer(TracerBase):
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def trace(
         self,
         root: Union[torch.nn.Module, Callable[..., Any]],

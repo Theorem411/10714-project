@@ -16,7 +16,7 @@ All three of these concepts (inputs, operations, and outputs) are represented wi
 
 ## Graph Module
 
-GraphModule is an nn.Module generated from an fx.Graph. Graphmodule has a graph attribute, as well as code and forward attributes generated from that graph.
+`GraphModule` is an `nn.Module` generated from an `fx.Graph`. `Graphmodule` has a `graph` attribute, as well as `code` and `forward` attributes generated from that graph.
 
 ### **Attributes**
 
