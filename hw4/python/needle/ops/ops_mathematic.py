@@ -15,6 +15,12 @@ from ..backend_selection import array_api, BACKEND
 from .ops_tuple import *
 DTYPE = "float32"
 
+import tvm
+from tvm import relax
+from tvm.ir.module import IRModule
+from tvm.script import relax as R
+from tvm.script import tir as T
+from tvm import te
 
 class EWiseAdd(TensorOp):
     def compute(self, a: NDArray, b: NDArray):
@@ -299,6 +305,18 @@ class MatMul(TensorOp):
         return (grad_a, grad_b)
         ### END YOUR SOLUTION
 
+    @classmethod
+    def map_tvm(bb, node_map, node):
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+        def te_matmul(A, B):
+            assert A.shape[1] == B.shape[0]
+            n = A.shape[0]
+            m = B.shape[1]
+            k = te.reduce_axis((0, A.shape[1]), name="k")
+            return te.compute((n, m), lambda i, j: te.sum(A[i, k] * B[k, j], axis=k), name="matmul")
+        return bb.emit_te(te_matmul, A, B)
+
 
 def matmul(a, b):
     return MatMul()(a, b)
@@ -367,6 +385,14 @@ class ReLU(TensorOp):
         # print(f'relu propagates nans: {np.isnan(res.numpy()).any()}')
         return res
         ### END YOUR SOLUTION
+    
+    @classmethod
+    def te(bb, node_map, node):
+        def te_relu(A):
+            te.compute(A.shape, lambda *i: te.max(A(*i), 0), name="relu")
+
+        A = node_map[node.inputs[0]]
+        return bb.emit_te(te_relu, A)
 
 
 def relu(a):
