@@ -305,8 +305,7 @@ class MatMul(TensorOp):
         return (grad_a, grad_b)
         ### END YOUR SOLUTION
 
-    @classmethod
-    def map_tvm(bb, node_map, node):
+    def map_tvm(self, bb, node_map, node):
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
         def te_matmul(A, B):
@@ -386,10 +385,9 @@ class ReLU(TensorOp):
         return res
         ### END YOUR SOLUTION
     
-    @classmethod
-    def te(bb, node_map, node):
+    def map_tvm(self, bb, node_map, node):
         def te_relu(A):
-            te.compute(A.shape, lambda *i: te.max(A(*i), 0), name="relu")
+            return te.compute(A.shape, lambda *i: te.max(A(*i), 0), name="relu")
 
         A = node_map[node.inputs[0]]
         return bb.emit_te(te_relu, A)
