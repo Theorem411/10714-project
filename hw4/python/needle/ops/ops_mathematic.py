@@ -29,6 +29,19 @@ class EWiseAdd(TensorOp):
     def gradient(self, out_grad: Tensor, node: Tensor):
         return out_grad, out_grad
 
+    def map_tvm(self, bb, node_map, node):
+        def te_ewise_add(A, B):
+            # Element-wise addition
+            return te.compute(
+                A.shape,
+                lambda *indices: A[indices] + B[indices],
+                name="ewise_add"
+            )
+
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+        return bb.emit_te(te_ewise_add, A, B)
+
 
 def add(a, b):
     return EWiseAdd()(a, b)
@@ -202,6 +215,46 @@ class Reshape(TensorOp):
         ### BEGIN YOUR SOLUTION
         return reshape(out_grad, node.inputs[0].shape)
         ### END YOUR SOLUTION
+    
+    def map_tvm(self, bb, node_map, node):
+        def compute_size(shape):
+            size = 1
+            for dim in shape:
+                size *= dim
+            return size
+
+        def te_reshape(A, target_shape):
+            input_shape = A.shape
+            input_size = compute_size(input_shape)
+            target_size = compute_size(target_shape)
+            assert input_size == target_size, "Input and target shapes must have the same number of elements"
+
+            def flat_index(indices, shape):
+                # Compute the flat index for the input tensor
+                flat = 0
+                stride = 1
+                for i in reversed(range(len(shape))):
+                    flat += indices[i] * stride
+                    stride *= shape[i]
+                return flat
+
+            def unravel_index(flat_idx, shape):
+                # Convert flat index to multidimensional indices for the given shape
+                indices = []
+                for dim in reversed(shape):
+                    indices.append(flat_idx % dim)
+                    flat_idx //= dim
+                return list(reversed(indices))
+
+            return te.compute(
+                target_shape,
+                lambda *indices: A[tuple(unravel_index(flat_index(indices, target_shape), input_shape))],
+                name="reshape"
+            )
+
+        A = node_map[node.inputs[0]]
+        target_shape = self.shape # Assuming the target shape is provided as an attribute
+        return bb.emit_te(te_reshape, A, target_shape)
 
 
 def reshape(a, shape):
@@ -230,6 +283,18 @@ class BroadcastTo(TensorOp):
 
         return reshape(res, orig_shape)
         ### END YOUR SOLUTION
+    
+    def map_tvm(self, bb, node_map, node):
+        def te_broadcast_to(A):
+            # Create a compute for broadcasting A to target_shape
+            return te.compute(
+                self.shape,
+                lambda *indices: A[indices[-len(A.shape):]],
+                name="broadcast_to"
+            )
+
+        A = node_map[node.inputs[0]]
+        return bb.emit_te(te_broadcast_to, A)# , target_shape)
 
 
 def broadcast_to(a, shape):

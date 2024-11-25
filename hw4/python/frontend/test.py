@@ -97,7 +97,7 @@ class MyModel(Module):
 
 if __name__ == "__main__":
     model = MyModel(5)
-    # !important! set placeholder = True
+    # !important set placeholder = True
     x = np.array([[1, 2, 3, 4, 5]], dtype=np.float32)
     input_tensor = Tensor(x, device=ndl.cpu(), requires_grad=False, placeholder=True)
     print(f'input: {input_tensor.shape}')
