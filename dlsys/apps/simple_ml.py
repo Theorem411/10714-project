@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'p
 import needle as ndl
 
 import needle.nn as nn
-# from .models import *
+from models import *
 
 from contextlib import contextmanager
 import time
@@ -233,6 +233,13 @@ if __name__ == "__main__":
     #########################################################
     # Performance Benchmarking
     #########################################################
+    config = {
+        "batch_size" : 8,
+        "dim" : 8,
+        "n_layers": 2,
+        "activation": nn.ReLU,
+        "device" : ndl.cpu,
+    }
     # !important set placeholder = True
     x = np.random.rand(config["batch_size"], config["dim"]).astype(np.float32)
 
