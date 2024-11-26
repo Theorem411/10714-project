@@ -38,6 +38,16 @@ class EWiseAdd(TensorOp):
             return topi.add(A, B)
 
         return bb.emit_te(te_ewise_add, A, B)
+    
+    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # First input tensor
+        B = node_map[node.inputs[1]]  # Second input tensor
+
+        # Use Relax's add operator for element-wise addition
+        add_expr = relax.op.add(A, B)
+
+        # Emit the operation
+        return bb.emit(add_expr)
 
 
 def add(a, b):
@@ -221,6 +231,16 @@ class Reshape(TensorOp):
             return topi.reshape(A, target_shape)
 
         return bb.emit_te(te_reshape, A)
+    
+    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]       # Input tensor to reshape
+        target_shape = self.shape          # The target shape to reshape into
+
+        # Use Relax's reshape operator
+        reshape_expr = relax.op.reshape(A, target_shape)
+
+        # Emit the operation
+        return bb.emit(reshape_expr)
 
 
 def reshape(a, shape):
@@ -258,6 +278,17 @@ class BroadcastTo(TensorOp):
             return topi.broadcast_to(A, target_shape)
 
         return bb.emit_te(te_broadcast_to, A)
+
+
+    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]       # Input tensor to broadcast
+        target_shape = self.shape          # The target shape to broadcast to
+
+        # Use Relax's broadcast_to operator
+        broadcast_expr = relax.op.broadcast_to(A, target_shape)
+
+        # Emit the operation
+        return bb.emit(broadcast_expr)
 
 
 def broadcast_to(a, shape):
@@ -345,6 +376,16 @@ class MatMul(TensorOp):
 
         return bb.emit_te(te_matmul, A, B)
 
+    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # First input tensor
+        B = node_map[node.inputs[1]]  # Second input tensor
+
+        # Use Relax's matmul operator
+        matmul_expr = relax.op.matmul(A, B)
+
+        # Emit the operation
+        return bb.emit(matmul_expr)
+
 
 def matmul(a, b):
     return MatMul()(a, b)
@@ -424,6 +465,15 @@ class ReLU(TensorOp):
             return topi.nn.relu(A)
 
         return bb.emit_te(te_relu, A)
+
+    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+
+        # Use Relax's ReLU operator
+        relu_expr = relax.op.nn.relu(A)
+
+        # Emit the operation
+        return bb.emit(relu_expr)
 
 
 def relu(a):
