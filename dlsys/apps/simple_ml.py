@@ -11,6 +11,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
 
 import needle as ndl
+from needle_tvm import *
 
 import needle.nn as nn
 from models import *
@@ -35,16 +36,12 @@ def evaluate_batch_mlp(model, module, X: np.ndarray):
     input_ndl = ndl.Tensor(X, device=device, requires_grad=False, placeholder=True)
     input_tvm = tvm.nd.array(X)
     
-    # compile IRModule
-    module_ex = relax.build(module, target="llvm")
-    module_vm = relax.VirtualMachine(module_ex, tvm.cpu())
-
     # performance
     with timer("needle"):
       ndl_out = model(input_ndl)
 
     with timer("tvm"):
-      tvm_out = module_vm["main"](input_tvm)
+      tvm_out = module["main"](input_tvm)
 
     # correctness: 
     assert np.allclose(tvm_out.asnumpy(),ndl_out.numpy(), atol=1e-4) # tweak tolerance if fails
@@ -234,22 +231,38 @@ if __name__ == "__main__":
     # Performance Benchmarking
     #########################################################
     config = {
-        "batch_size" : 8,
-        "dim" : 8,
-        "n_layers": 2,
-        "activation": nn.ReLU,
-        "device" : ndl.cpu(),
+        "batch_size" :  32,  # 8,
+        "dim" :         512, # 8,
+        "n_layers":     8,   # 2
+        "activation":   nn.ReLU,
+        "device" :      ndl.cpu(),
+        "target" :      tvm.target.Target("llvm"),
+        "tvm_device":   tvm.cpu(),
     }
-    # !important set placeholder = True
+
+    # input
     x = np.random.rand(config["batch_size"], config["dim"]).astype(np.float32)
 
+    #########################################################
+    # Needle model
+    #########################################################
     model = MLPModel(dim=config["dim"], device=config["device"])
-    # output_tensor = mod(input_tensor)
 
+
+    #########################################################
+    # Needle model
+    #########################################################
     # generate tvm IRModule using Tensor graph
     module = to_tvm_tensor(model, ndl.Tensor(x, device=config["device"]))
     module.show()
 
-    X_out = evaluate_batch_mlp(model, module, x)
+    # optimize IRModule
+    module = tune_tir(module, "te_matmul", target=config["target"])
+
+    # compile IRModule
+    module_ex = relax.build(module, target=config["target"])
+    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+
+    X_out = evaluate_batch_mlp(model, module_vm, x)
     # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
     # print("MyModelWithParams_before time-cost: %g ms" % (ftimer(tvm.nd.array(x)).mean * 1000))

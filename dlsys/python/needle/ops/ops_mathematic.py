@@ -21,6 +21,7 @@ from tvm.ir.module import IRModule
 from tvm.script import relax as R
 from tvm.script import tir as T
 from tvm import te
+from tvm import topi
 
 class EWiseAdd(TensorOp):
     def compute(self, a: NDArray, b: NDArray):
@@ -30,16 +31,12 @@ class EWiseAdd(TensorOp):
         return out_grad, out_grad
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        def te_ewise_add(A: te.Buffer, B: te.Buffer) -> te.Buffer:
-            # Element-wise addition
-            return te.compute(
-                A.shape,
-                lambda *indices: A[indices] + B[indices],
-                name="ewise_add"
-            )
-
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
+
+        def te_ewise_add(A, B):
+            return topi.add(A, B)
+
         return bb.emit_te(te_ewise_add, A, B)
 
 
@@ -217,44 +214,13 @@ class Reshape(TensorOp):
         ### END YOUR SOLUTION
     
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        def compute_size(shape):
-            size = 1
-            for dim in shape:
-                size *= dim
-            return size
-
-        def te_reshape(A, target_shape):
-            input_shape = A.shape
-            input_size = compute_size(input_shape)
-            target_size = compute_size(target_shape)
-            assert input_size == target_size, "Input and target shapes must have the same number of elements"
-
-            def flat_index(indices, shape):
-                # Compute the flat index for the input tensor
-                flat = 0
-                stride = 1
-                for i in reversed(range(len(shape))):
-                    flat += indices[i] * stride
-                    stride *= shape[i]
-                return flat
-
-            def unravel_index(flat_idx, shape):
-                # Convert flat index to multidimensional indices for the given shape
-                indices = []
-                for dim in reversed(shape):
-                    indices.append(flat_idx % dim)
-                    flat_idx //= dim
-                return list(reversed(indices))
-
-            return te.compute(
-                target_shape,
-                lambda *indices: A[tuple(unravel_index(flat_index(indices, target_shape), input_shape))],
-                name="reshape"
-            )
-
         A = node_map[node.inputs[0]]
-        target_shape = self.shape # Assuming the target shape is provided as an attribute
-        return bb.emit_te(te_reshape, A, target_shape)
+        target_shape = self.shape 
+
+        def te_reshape(A):
+            return topi.reshape(A, target_shape)
+
+        return bb.emit_te(te_reshape, A)
 
 
 def reshape(a, shape):
@@ -285,16 +251,13 @@ class BroadcastTo(TensorOp):
         ### END YOUR SOLUTION
     
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        def te_broadcast_to(A):
-            # Create a compute for broadcasting A to target_shape
-            return te.compute(
-                self.shape,
-                lambda *indices: A[indices[-len(A.shape):]],
-                name="broadcast_to"
-            )
-
         A = node_map[node.inputs[0]]
-        return bb.emit_te(te_broadcast_to, A)# , target_shape)
+        target_shape = self.shape  # Assuming self.shape contains the target shape
+
+        def te_broadcast_to(A):
+            return topi.broadcast_to(A, target_shape)
+
+        return bb.emit_te(te_broadcast_to, A)
 
 
 def broadcast_to(a, shape):
@@ -376,12 +339,10 @@ class MatMul(TensorOp):
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
+
         def te_matmul(A, B):
-            assert A.shape[1] == B.shape[0]
-            n = A.shape[0]
-            m = B.shape[1]
-            k = te.reduce_axis((0, A.shape[1]), name="k")
-            return te.compute((n, m), lambda i, j: te.sum(A[i, k] * B[k, j], axis=k), name="matmul")
+            return topi.matmul(A, B)
+
         return bb.emit_te(te_matmul, A, B)
 
 
@@ -457,10 +418,11 @@ class ReLU(TensorOp):
         ### END YOUR SOLUTION
     
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        def te_relu(A):
-            return te.compute(A.shape, lambda *i: te.max(A(*i), 0), name="relu")
-
         A = node_map[node.inputs[0]]
+
+        def te_relu(A):
+            return topi.nn.relu(A)
+
         return bb.emit_te(te_relu, A)
 
 
