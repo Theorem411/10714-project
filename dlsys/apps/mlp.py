@@ -11,6 +11,16 @@ import needle as ndl
 import needle.nn as nn
 from needle_tvm import to_tvm_tensor, to_tvm_fx
 
+# !global config. edit this to edit run hyperparams
+config = {
+    "batch_size" : 8,
+    "dim" : 8,
+    "n_layers": 2,
+    "activation": nn.ReLU,
+    "device" : ndl.cpu,
+}
+
+
 class MLPModel(nn.Module):
     def __init__(self, n_layers=3, dim=512, activation=nn.ReLU, bias=False, device=None):
             components = []
@@ -24,13 +34,12 @@ if __name__ == "__main__":
     #########################################################
     # Performance Benchmarking
     #########################################################
-
     # !important set placeholder = True
-    x = np.array([[1, 2, 3, 4, 5]], dtype=np.float32)
-    input_tensor = ndl.Tensor(x, device=ndl.cpu(), requires_grad=False, placeholder=True)
+    x = np.random.rand(config["batch_size"], config["dim"]).astype(np.float32)
+    input_tensor = ndl.Tensor(x, device=config["device"](), requires_grad=False, placeholder=True)
     # print(f'input: {input_tensor.shape}')
 
-    mod = MLPModel(dim=5, device=ndl.cpu())
+    mod = MLPModel(dim=config["dim"], device=config["device"]())
     output_tensor = mod(input_tensor)
 
     # generate tvm IRModule using Tensor graph
@@ -43,7 +52,5 @@ if __name__ == "__main__":
 
     # Run the TVM IRModule
     tvm_output = vm["main"](tvm.nd.array(x))
-    print(tvm_output)
-    print(output_tensor.numpy())
     assert np.allclose(tvm_output.asnumpy(),output_tensor.numpy())
- 
+    print(f"Outputs Match")
