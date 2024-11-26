@@ -10,10 +10,7 @@ from needle_tvm import to_tvm_tensor, to_tvm_fx
 
 class MLPModel(nn.Module):
     def __init__(self, n_layers=3, dim=512, activation=nn.ReLU, bias=False, device=None):
-        self.mlp = nn.Sequential(*[
-            nn.Linear(dim, dim, bias=bias), activation() for _ in range(n_layers)
-            ]
-        )
+        self.mlp = nn.Sequential(*[(nn.Linear(dim, dim, bias=bias), activation()) for _ in range(n_layers)])
     
     def forward(self, x):
         return self.mlp(x)
