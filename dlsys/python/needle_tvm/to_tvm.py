@@ -71,7 +71,9 @@ def to_tvm_tensor(mod: Module, *args, **kwargs):
 
               # Map the operation to TVM
               # print(f'op: {repr(node.op)}\n')
-              tvm_var = node.op.emit_te(bb, value_to_var, node)
+              # tvm_var = node.op.emit_te(bb, value_to_var, node)
+              tvm_var = node.op.emit(bb, value_to_var, node)
+              
               value_to_var[node] = tvm_var
       
           fn_output = bb.emit_output(value_to_var[topo_order[-1]])
