@@ -5,6 +5,7 @@ import gzip
 import numpy as np
 import tvm
 from tvm import relax
+from tvm.ir import transform
 
 import sys
 import os
@@ -254,14 +255,18 @@ if __name__ == "__main__":
     #########################################################
     # generate tvm IRModule using Tensor graph
     module = to_tvm_tensor(model, ndl.Tensor(x, device=config["device"]))
+    print('='*5 + " original module" + '='*5)
     module.show()
 
     # optimize IRModule
-    module = tune_tir(module, "te_matmul", target=config["target"])
+    # module = tune_tir(module, "te_matmul", target=config["target"])
 
     # compile IRModule
-    module_ex = relax.build(module, target=config["target"])
-    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+    with transform.PassContext(opt_level=4):
+      module_ex = relax.build(module, target=config["target"])
+      print('='*5 + " transformed module" + '='*5)
+      module_ex.ir_mod.show()
+      module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
 
     X_out = evaluate_batch_mlp(model, module_vm, x)
     # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
