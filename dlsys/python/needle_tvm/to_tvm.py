@@ -20,7 +20,7 @@ import torch
 from .tracer import NeedleTracer
 
 
-def to_tvm_tensor(mod: nn.Module, *args, **kwargs):
+def to_tvm_tensor(mod: Module, *args, **kwargs):
   # IMPORTANT: to_tvm_tensor needs to mark explicitly which tensor is the input/placeholder
   for t in args: 
     if isinstance(t, Tensor):
@@ -78,7 +78,7 @@ def to_tvm_tensor(mod: nn.Module, *args, **kwargs):
       bb.emit_func_output(value_to_var[topo_order[-1]], fn_inputs)
   return bb.get()
 
-def to_tvm_fx(mod: nn.Module, *args, **kwargs):
+def to_tvm_fx(mod: Module, *args, **kwargs):
   # code adopted from: https://mlc.ai/chapter_integration/index.html#remark-translating-into-high-level-operators 
   def from_fx(fx_mod, input_shapes, call_function_map, call_module_map):
     input_index = 0
