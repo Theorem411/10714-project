@@ -3,110 +3,72 @@
 import struct
 import gzip
 import numpy as np
+import tvm
+from tvm import relax
 
 import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
 
-sys.path.append("python/")
 import needle as ndl
 
 import needle.nn as nn
-from apps.models import *
+# from .models import *
+
+from contextlib import contextmanager
 import time
+
+## Timer 
+@contextmanager
+def timer(model_name: str):
+    start_time = time.perf_counter()
+    yield
+    end_time = time.perf_counter()
+    print(f"{model_name} Execution time: {end_time - start_time:.6f} seconds")
+
+
 device = ndl.cpu()
 
-def parse_mnist(image_filesname, label_filename):
-    """Read an images and labels file in MNIST format.  See this page:
-    http://yann.lecun.com/exdb/mnist/ for a description of the file format.
+### MLP performance evaluation ###
+def evaluate_batch_mlp(model, module, X: np.ndarray):
+    # input tensor wrapper
+    input_ndl = ndl.Tensor(X, device=device, requires_grad=False, placeholder=True)
+    input_tvm = tvm.nd.array(X)
+    
+    # compile IRModule
+    module_ex = relax.build(module, target="llvm")
+    module_vm = relax.VirtualMachine(module_ex, tvm.cpu())
 
-    Args:
-        image_filename (str): name of gzipped images file in MNIST format
-        label_filename (str): name of gzipped labels file in MNIST format
+    # performance
+    with timer("needle"):
+      ndl_out = model(input_ndl)
 
-    Returns:
-        Tuple (X,y):
-            X (numpy.ndarray[np.float32]): 2D numpy array containing the loaded
-                data.  The dimensionality of the data should be
-                (num_examples x input_dim) where 'input_dim' is the full
-                dimension of the data, e.g., since MNIST images are 28x28, it
-                will be 784.  Values should be of type np.float32, and the data
-                should be normalized to have a minimum value of 0.0 and a
-                maximum value of 1.0.
+    with timer("tvm"):
+      tvm_out = module_vm["main"](input_tvm)
 
-            y (numpy.ndarray[dypte=np.int8]): 1D numpy array containing the
-                labels of the examples.  Values should be of type np.int8 and
-                for MNIST will contain the values 0-9.
+    # correctness: 
+    assert np.allclose(tvm_out.asnumpy(),ndl_out.numpy(), atol=1e-4) # tweak tolerance if fails
+
+    return ndl_out
+
+    
+    
+def evaluate_epoch_mlp(dataloader, model, module, loss_fn=nn.SoftmaxLoss(), opt=None):
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+      Iterates over the dataloader. If optimizer is not None, sets the
+      model to train mode, and for each batch updates the model parameters.
+      If optimizer is None, sets the model to eval mode, and simply computes
+      the loss/accuracy.
 
+      Args:
+          dataloader: Dataloader instance
+          model: nn.Module instance
+          loss_fn: nn.Module instance
+          opt: Optimizer instance (optional)
 
-def softmax_loss(Z, y_one_hot):
-    """Return softmax loss.  Note that for the purposes of this assignment,
-    you don't need to worry about "nicely" scaling the numerical properties
-    of the log-sum-exp computation, but can just compute this directly.
-
-    Args:
-        Z (ndl.Tensor[np.float32]): 2D Tensor of shape
-            (batch_size, num_classes), containing the logit predictions for
-            each class.
-        y (ndl.Tensor[np.int8]): 2D Tensor of shape (batch_size, num_classes)
-            containing a 1 at the index of the true label of each example and
-            zeros elsewhere.
-
-    Returns:
-        Average softmax loss over the sample. (ndl.Tensor[np.float32])
-    """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
-
-
-def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
-    """Run a single epoch of SGD for a two-layer neural network defined by the
-    weights W1 and W2 (with no bias terms):
-        logits = ReLU(X * W1) * W1
-    The function should use the step size lr, and the specified batch size (and
-    again, without randomizing the order of X).
-
-    Args:
-        X (np.ndarray[np.float32]): 2D input array of size
-            (num_examples x input_dim).
-        y (np.ndarray[np.uint8]): 1D class label array of size (num_examples,)
-        W1 (ndl.Tensor[np.float32]): 2D array of first layer weights, of shape
-            (input_dim, hidden_dim)
-        W2 (ndl.Tensor[np.float32]): 2D array of second layer weights, of shape
-            (hidden_dim, num_classes)
-        lr (float): step size (learning rate) for SGD
-        batch (int): size of SGD mini-batch
-
-    Returns:
-        Tuple: (W1, W2)
-            W1: ndl.Tensor[np.float32]
-            W2: ndl.Tensor[np.float32]
-    """
-
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
-
-### CIFAR-10 training ###
-def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None):
-    """
-    Iterates over the dataloader. If optimizer is not None, sets the
-    model to train mode, and for each batch updates the model parameters.
-    If optimizer is None, sets the model to eval mode, and simply computes
-    the loss/accuracy.
-
-    Args:
-        dataloader: Dataloader instance
-        model: nn.Module instance
-        loss_fn: nn.Module instance
-        opt: Optimizer instance (optional)
-
-    Returns:
-        avg_acc: average accuracy over dataset
-        avg_loss: average loss over dataset
+      Returns:
+          avg_acc: average accuracy over dataset
+          avg_loss: average loss over dataset
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
@@ -118,19 +80,12 @@ def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None)
     total = 0
 
     for i, (X, y) in enumerate(dataloader):
-        if train:
-            model.train()
-            opt.reset_grad()
-
-        else:
-            model.eval()
+        # set needle model to forward mode
+        model.eval()
         
-        out = model.forward(X)
+        # out = model.forward(X)
+        out = evaluate_batch_mlp(model, module, X)
         loss = loss_fn(out, y)
-
-        if train:
-            loss.backward()
-            opt.step()
 
         losses.append(loss.numpy().item())
         correct += np.sum(out.numpy().argmax(axis=1) == y)
@@ -143,188 +98,152 @@ def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None)
     ### END YOUR SOLUTION
 
 
-def train_cifar10(model, dataloader, n_epochs=1, optimizer=ndl.optim.Adam,
-          lr=0.001, weight_decay=0.001, loss_fn=nn.SoftmaxLoss):
-    """
-    Performs {n_epochs} epochs of training.
-
-    Args:
-        dataloader: Dataloader instance
-        model: nn.Module instance
-        n_epochs: number of epochs (int)
-        optimizer: Optimizer class
-        lr: learning rate (float)
-        weight_decay: weight decay (float)
-        loss_fn: nn.Module class
-
-    Returns:
-        avg_acc: average accuracy over dataset from last epoch of training
-        avg_loss: average loss over dataset from last epoch of training
-    """
-    np.random.seed(4)
-    ### BEGIN YOUR SOLUTION
-    for _ in range(n_epochs):
-        avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn, optimizer(model.parameters(), lr=lr, weight_decay=weight_decay))
-    
-    return avg_acc, avg_loss
-    ### END YOUR SOLUTION
-
-
-def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss):
-    """
-    Computes the test accuracy and loss of the model.
-
-    Args:
-        dataloader: Dataloader instance
-        model: nn.Module instance
-        loss_fn: nn.Module class
-
-    Returns:
-        avg_acc: average accuracy over dataset
-        avg_loss: average loss over dataset
-    """
-    np.random.seed(4)
-    ### BEGIN YOUR SOLUTION
-    avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn)
-    return avg_acc, avg_loss
-    ### END YOUR SOLUTION
-
 
 ### PTB training ###
-def get_batch(batches, i, bptt, device=None, dtype=None):
-    """
-    get_batch subdivides the source data into chunks of length bptt.
-    If source is equal to the example output of the batchify function, with
-    a bptt-limit of 2, we'd get the following two Variables for i = 0:
-    ┌ a g m s ┐ ┌ b h n t ┐
-    └ b h n t ┘ └ c i o u ┘
-    Note that despite the name of the function, the subdivison of data is not
-    done along the batch dimension (i.e. dimension 1), since that was handled
-    by the batchify function. The chunks are along dimension 0, corresponding
-    to the seq_len dimension in the LSTM or RNN.
-    Inputs:
-    batches - numpy array returned from batchify function
-    i - index
-    bptt - Sequence length
-    Returns:
-    data - Tensor of shape (bptt, bs) with cached data as NDArray
-    target - Tensor of shape (bptt*bs,) with cached data as NDArray
-    """
-    ### BEGIN YOUR SOLUTION
-    seq_len = min(bptt, len(batches) - 1 - i)
-    data = batches[i:i+seq_len, :]
-    target = batches[i+1:i+1+seq_len, :].flatten()
-    return ndl.Tensor(data, device=device, dtype=dtype), ndl.Tensor(target, device=device, dtype=dtype)
+# def get_batch(batches, i, bptt, device=None, dtype=None):
+#     """
+#     get_batch subdivides the source data into chunks of length bptt.
+#     If source is equal to the example output of the batchify function, with
+#     a bptt-limit of 2, we'd get the following two Variables for i = 0:
+#     ┌ a g m s ┐ ┌ b h n t ┐
+#     └ b h n t ┘ └ c i o u ┘
+#     Note that despite the name of the function, the subdivison of data is not
+#     done along the batch dimension (i.e. dimension 1), since that was handled
+#     by the batchify function. The chunks are along dimension 0, corresponding
+#     to the seq_len dimension in the LSTM or RNN.
+#     Inputs:
+#     batches - numpy array returned from batchify function
+#     i - index
+#     bptt - Sequence length
+#     Returns:
+#     data - Tensor of shape (bptt, bs) with cached data as NDArray
+#     target - Tensor of shape (bptt*bs,) with cached data as NDArray
+#     """
+#     ### BEGIN YOUR SOLUTION
+#     seq_len = min(bptt, len(batches) - 1 - i)
+#     data = batches[i:i+seq_len, :]
+#     target = batches[i+1:i+1+seq_len, :].flatten()
+#     return ndl.Tensor(data, device=device, dtype=dtype), ndl.Tensor(target, device=device, dtype=dtype)
 
-def epoch_general_ptb(data, model, seq_len=40, loss_fn=nn.SoftmaxLoss(), opt=None,
-        clip=None, device=None, dtype="float32"):
-    """
-    Iterates over the data. If optimizer is not None, sets the
-    model to train mode, and for each batch updates the model parameters.
-    If optimizer is None, sets the model to eval mode, and simply computes
-    the loss/accuracy.
+# def epoch_general_ptb(data, model, seq_len=40, loss_fn=nn.SoftmaxLoss(), opt=None,
+#         clip=None, device=None, dtype="float32"):
+#     """
+#     Iterates over the data. If optimizer is not None, sets the
+#     model to train mode, and for each batch updates the model parameters.
+#     If optimizer is None, sets the model to eval mode, and simply computes
+#     the loss/accuracy.
 
-    Args:
-        data: data of shape (nbatch, batch_size) given from batchify function
-        model: LanguageModel instance
-        seq_len: i.e. bptt, sequence length
-        loss_fn: nn.Module instance
-        opt: Optimizer instance (optional)
-        clip: max norm of gradients (optional)
+#     Args:
+#         data: data of shape (nbatch, batch_size) given from batchify function
+#         model: LanguageModel instance
+#         seq_len: i.e. bptt, sequence length
+#         loss_fn: nn.Module instance
+#         opt: Optimizer instance (optional)
+#         clip: max norm of gradients (optional)
 
-    Returns:
-        avg_acc: average accuracy over dataset
-        avg_loss: average loss over dataset
-    """
-    np.random.seed(4)
-    ### BEGIN YOUR SOLUTION
-    nbatch, batch_size = data.shape
-    losses = []
-    correct = 0
-    total = 0
+#     Returns:
+#         avg_acc: average accuracy over dataset
+#         avg_loss: average loss over dataset
+#     """
+#     np.random.seed(4)
+#     ### BEGIN YOUR SOLUTION
+#     nbatch, batch_size = data.shape
+#     losses = []
+#     correct = 0
+#     total = 0
 
-    for i in range(nbatch):
-        if opt is not None:
-            model.train()
-            opt.reset_grad()
-        else:
-            model.eval()
+#     for i in range(nbatch):
+#         if opt is not None:
+#             model.train()
+#             opt.reset_grad()
+#         else:
+#             model.eval()
         
-        X, y = get_batch(data, i, seq_len, device=device, dtype=dtype)
-        if (X.shape[0] < 1): break
-        out, _ = model.forward(X)
-        loss = loss_fn(out, y)
+#         X, y = get_batch(data, i, seq_len, device=device, dtype=dtype)
+#         if (X.shape[0] < 1): break
+#         out, _ = model.forward(X)
+#         loss = loss_fn(out, y)
 
-        if opt is not None:
-            loss.backward()
-            opt.step()
+#         if opt is not None:
+#             loss.backward()
+#             opt.step()
 
-        losses.append(loss.numpy().item())
-        correct += np.sum(out.numpy().argmax(axis=1) == y)
-        total += y.shape[0]
+#         losses.append(loss.numpy().item())
+#         correct += np.sum(out.numpy().argmax(axis=1) == y)
+#         total += y.shape[0]
     
-    avg_loss = np.mean(losses)
-    avg_acc = correct / total
-    return avg_acc, avg_loss
+#     avg_loss = np.mean(losses)
+#     avg_acc = correct / total
+#     return avg_acc, avg_loss
     
-    ### END YOUR SOLUTION
+#     ### END YOUR SOLUTION
 
 
-def train_ptb(model, data, seq_len=40, n_epochs=1, optimizer=ndl.optim.SGD,
-          lr=4.0, weight_decay=0.0, loss_fn=nn.SoftmaxLoss, clip=None,
-          device=None, dtype="float32"):
-    """
-    Performs {n_epochs} epochs of training.
+# def train_ptb(model, data, seq_len=40, n_epochs=1, optimizer=ndl.optim.SGD,
+#           lr=4.0, weight_decay=0.0, loss_fn=nn.SoftmaxLoss, clip=None,
+#           device=None, dtype="float32"):
+#     """
+#     Performs {n_epochs} epochs of training.
 
-    Args:
-        model: LanguageModel instance
-        data: data of shape (nbatch, batch_size) given from batchify function
-        seq_len: i.e. bptt, sequence length
-        n_epochs: number of epochs (int)
-        optimizer: Optimizer class
-        lr: learning rate (float)
-        weight_decay: weight decay (float)
-        loss_fn: nn.Module class
-        clip: max norm of gradients (optional)
+#     Args:
+#         model: LanguageModel instance
+#         data: data of shape (nbatch, batch_size) given from batchify function
+#         seq_len: i.e. bptt, sequence length
+#         n_epochs: number of epochs (int)
+#         optimizer: Optimizer class
+#         lr: learning rate (float)
+#         weight_decay: weight decay (float)
+#         loss_fn: nn.Module class
+#         clip: max norm of gradients (optional)
 
-    Returns:
-        avg_acc: average accuracy over dataset from last epoch of training
-        avg_loss: average loss over dataset from last epoch of training
-    """
-    for _ in range(n_epochs):
-        avg_acc, avg_loss = epoch_general_ptb(data, model, seq_len, loss_fn(), optimizer(model.parameters(), lr=lr, weight_decay=weight_decay),
-            clip, device, dtype)
-    return avg_acc, avg_loss
-    ### BEGIN YOUR SOLUTION
+#     Returns:
+#         avg_acc: average accuracy over dataset from last epoch of training
+#         avg_loss: average loss over dataset from last epoch of training
+#     """
+#     for _ in range(n_epochs):
+#         avg_acc, avg_loss = epoch_general_ptb(data, model, seq_len, loss_fn(), optimizer(model.parameters(), lr=lr, weight_decay=weight_decay),
+#             clip, device, dtype)
+#     return avg_acc, avg_loss
+#     ### BEGIN YOUR SOLUTION
     
-    ### END YOUR SOLUTION
+#     ### END YOUR SOLUTION
 
-def evaluate_ptb(model, data, seq_len=40, loss_fn=nn.SoftmaxLoss,
-        device=None, dtype="float32"):
-    """
-    Computes the test accuracy and loss of the model.
+# def evaluate_ptb(model, data, seq_len=40, loss_fn=nn.SoftmaxLoss,
+#         device=None, dtype="float32"):
+#     """
+#     Computes the test accuracy and loss of the model.
 
-    Args:
-        model: LanguageModel instance
-        data: data of shape (nbatch, batch_size) given from batchify function
-        seq_len: i.e. bptt, sequence length
-        loss_fn: nn.Module class
+#     Args:
+#         model: LanguageModel instance
+#         data: data of shape (nbatch, batch_size) given from batchify function
+#         seq_len: i.e. bptt, sequence length
+#         loss_fn: nn.Module class
 
-    Returns:
-        avg_acc: average accuracy over dataset
-        avg_loss: average loss over dataset
-    """
-    np.random.seed(4)
-    ### BEGIN YOUR SOLUTION
-    return epoch_general_ptb(data, model, seq_len, loss_fn())
-    ### END YOUR SOLUTION
-
-### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT
+#     Returns:
+#         avg_acc: average accuracy over dataset
+#         avg_loss: average loss over dataset
+#     """
+#     np.random.seed(4)
+#     ### BEGIN YOUR SOLUTION
+#     return epoch_general_ptb(data, model, seq_len, loss_fn())
+#     ### END YOUR SOLUTION
 
 
-def loss_err(h, y):
-    """Helper function to compute both loss and error"""
-    y_one_hot = np.zeros((y.shape[0], h.shape[-1]))
-    y_one_hot[np.arange(y.size), y] = 1
-    y_ = ndl.Tensor(y_one_hot)
-    return softmax_loss(h, y_).numpy(), np.mean(h.numpy().argmax(axis=1) != y)
+if __name__ == "__main__":
+    #########################################################
+    # Performance Benchmarking
+    #########################################################
+    # !important set placeholder = True
+    x = np.random.rand(config["batch_size"], config["dim"]).astype(np.float32)
+
+    model = MLPModel(dim=config["dim"], device=config["device"]())
+    # output_tensor = mod(input_tensor)
+
+    # generate tvm IRModule using Tensor graph
+    module = to_tvm_tensor(mod, input_tensor)
+    module.show()
+
+    X_out = evaluate_batch_mlp(model, module, X)
+
+    # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
+    # print("MyModelWithParams_before time-cost: %g ms" % (ftimer(tvm.nd.array(x)).mean * 1000))
