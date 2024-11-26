@@ -247,7 +247,7 @@ if __name__ == "__main__":
     # output_tensor = mod(input_tensor)
 
     # generate tvm IRModule using Tensor graph
-    module = to_tvm_tensor(mod, input_tensor)
+    module = to_tvm_tensor(model, input_tensor)
     module.show()
 
     X_out = evaluate_batch_mlp(model, module, X)
