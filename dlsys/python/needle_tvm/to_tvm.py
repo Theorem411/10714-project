@@ -20,7 +20,7 @@ import torch
 from .tracer import NeedleTracer
 
 
-def to_tvm_tensor(mod: Module, te: bool = False, *args, **kwargs):
+def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
   # IMPORTANT: to_tvm_tensor needs to mark explicitly which tensor is the input/placeholder
   for t in args: 
     if isinstance(t, Tensor):
@@ -80,7 +80,7 @@ def to_tvm_tensor(mod: Module, te: bool = False, *args, **kwargs):
               value_to_var[node] = tvm_var
       
           fn_output = bb.emit_output(value_to_var[topo_order[-1]])
-          
+
       bb.emit_func_output(value_to_var[topo_order[-1]], fn_inputs)
   return bb.get()
 

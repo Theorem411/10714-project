@@ -255,7 +255,7 @@ if __name__ == "__main__":
     # Needle model
     #########################################################
     # generate tvm IRModule using Tensor graph
-    module = to_tvm_tensor(model, ndl.Tensor(x, device=config["device"]))
+    module = to_tvm_tensor(model, False, ndl.Tensor(x, device=config["device"]))
     print('='*5 + " original module" + '='*5)
     module.show()
 
