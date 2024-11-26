@@ -260,7 +260,7 @@ if __name__ == "__main__":
     module.show()
 
     # optimize IRModule
-    # module = tvm.relax.transform.LegalizeOps()(module)
+    module = tvm.relax.transform.LegalizeOps()(module)
     module = tvm.ir.transform.Sequential(
       [
         tvm.relax.transform.AnnotateTIROpPattern(),
