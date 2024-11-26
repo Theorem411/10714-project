@@ -71,6 +71,28 @@ class Op:
             return tuple(output)
         else:
             return (output,)
+    
+    ###################################################
+    # Final project: integration with TVM
+    ###################################################
+    def emit_te(self, bb, node_map, node):
+      """Compute partial adjoint for each input value for a given output adjoint.
+
+        Parameters
+        ----------
+        node_map: Dict[Value, relax.Var]  
+            Map from needle Value to tvm.relax.Var.
+        bb:       relax.BlockBuilder
+            TVM block builder for constructing IRModule
+        node: Value
+            The value node of forward evaluation.
+
+        Returns
+        -------
+        bb.emit_te(..): 
+            A newly generated TE in the IRModule. 
+        """
+      raise NotImplementedError()
 
 
 class TensorOp(Op):

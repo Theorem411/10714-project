@@ -335,6 +335,9 @@ class Summation(TensorOp):
         return broadcast_to(reshape(out_grad, tuple(shape)), node.inputs[0].shape)
         ## END YOUR SOLUTION
 
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+      raise NotImplementedError
+
 def summation(a, axes=None):
     return Summation(axes)(a)
 
@@ -396,6 +399,9 @@ class Negate(TensorOp):
         ### BEGIN YOUR SOLUTION
         return -1*out_grad
         ### END YOUR SOLUTION
+      
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+      raise NotImplementedError
 
 
 def negate(a):
@@ -684,7 +690,9 @@ class Conv(TensorOp):
         return X_grad, W_grad
         
         ### END YOUR SOLUTION
-
+  
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+      raise NotImplementedError
 
 def conv(a, b, stride=1, padding=1):
     return Conv(stride, padding)(a, b)

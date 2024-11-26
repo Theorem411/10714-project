@@ -21,6 +21,10 @@ class MLPModel(nn.Module):
         return self.mlp(x)
 
 if __name__ == "__main__":
+    #########################################################
+    # Performance Benchmarking
+    #########################################################
+
     # !important set placeholder = True
     x = np.array([[1, 2, 3, 4, 5]], dtype=np.float32)
     input_tensor = Tensor(x, device=ndl.cpu(), requires_grad=False, placeholder=True)
