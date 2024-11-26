@@ -4,8 +4,8 @@ import struct
 import gzip
 import numpy as np
 import tvm
-from tvm import relax
-from tvm.ir import transform
+from tvm import relax, transform
+from tvm import ir
 
 import sys
 import os
@@ -236,6 +236,7 @@ if __name__ == "__main__":
         "dim" :         512, # 8,
         "n_layers":     8,   # 2
         "activation":   nn.ReLU,
+        "bias":         True,
         "device" :      ndl.cpu(),
         "target" :      tvm.target.Target("llvm"),
         "tvm_device":   tvm.cpu(),
@@ -247,7 +248,7 @@ if __name__ == "__main__":
     #########################################################
     # Needle model
     #########################################################
-    model = MLPModel(dim=config["dim"], device=config["device"])
+    model = MLPModel(dim=config["dim"], device=config["device"], bias=config["bias"])
 
 
     #########################################################
@@ -259,15 +260,21 @@ if __name__ == "__main__":
     module.show()
 
     # optimize IRModule
-    # module = tune_tir(module, "te_matmul", target=config["target"])
+    # module = tvm.relax.transform.LegalizeOps()(module)
+    module = tvm.ir.transform.Sequential(
+      [
+        tvm.relax.transform.AnnotateTIROpPattern(),
+        tvm.relax.transform.FuseOps(),
+        tvm.relax.transform.FuseTIR(),
+      ])(module)
+    print('='*5 + " transformed module" + '='*5)
+    module.show()
 
     # compile IRModule
     with transform.PassContext(opt_level=4):
       module_ex = relax.build(module, target=config["target"])
-      print('='*5 + " transformed module" + '='*5)
-      module_ex.ir_mod.show()
       module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
-
+    
     X_out = evaluate_batch_mlp(model, module_vm, x)
     # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
     # print("MyModelWithParams_before time-cost: %g ms" % (ftimer(tvm.nd.array(x)).mean * 1000))
