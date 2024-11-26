@@ -238,19 +238,18 @@ if __name__ == "__main__":
         "dim" : 8,
         "n_layers": 2,
         "activation": nn.ReLU,
-        "device" : ndl.cpu,
+        "device" : ndl.cpu(),
     }
     # !important set placeholder = True
     x = np.random.rand(config["batch_size"], config["dim"]).astype(np.float32)
 
-    model = MLPModel(dim=config["dim"], device=config["device"]())
+    model = MLPModel(dim=config["dim"], device=config["device"])
     # output_tensor = mod(input_tensor)
 
     # generate tvm IRModule using Tensor graph
-    module = to_tvm_tensor(model, input_tensor)
+    module = to_tvm_tensor(model, ndl.Tensor(x, device=config["device"]))
     module.show()
 
-    X_out = evaluate_batch_mlp(model, module, X)
-
+    X_out = evaluate_batch_mlp(model, module, x)
     # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
     # print("MyModelWithParams_before time-cost: %g ms" % (ftimer(tvm.nd.array(x)).mean * 1000))
