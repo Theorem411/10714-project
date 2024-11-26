@@ -233,7 +233,7 @@ def _transfer_attrs(fr, to):
 
 
 
-[docs]@compatibility(is_backward_compatible=True)
+@compatibility(is_backward_compatible=True)
 class Tracer(TracerBase):
     # Reference: https://github.com/pytorch/pytorch/issues/54354
     # The first line of this docstring overrides the one Sphinx generates for the

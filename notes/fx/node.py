@@ -287,7 +287,7 @@ class Node(_NodeBase):
         return self._prev
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def prepend(self, x: 'Node') -> None:
         """
         Insert x before this node in the list of nodes in the graph. Example::

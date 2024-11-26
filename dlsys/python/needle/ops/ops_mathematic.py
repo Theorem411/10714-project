@@ -1,7 +1,7 @@
 """Operator implementations."""
 
 from numbers import Number
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Tuple, Union, Dict
 
 from ..autograd import NDArray
 from ..autograd import Op, Tensor, Value, TensorOp
@@ -29,8 +29,8 @@ class EWiseAdd(TensorOp):
     def gradient(self, out_grad: Tensor, node: Tensor):
         return out_grad, out_grad
 
-    def map_tvm(self, bb, node_map, node):
-        def te_ewise_add(A, B):
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        def te_ewise_add(A: te.Buffer, B: te.Buffer) -> te.Buffer:
             # Element-wise addition
             return te.compute(
                 A.shape,
@@ -216,7 +216,7 @@ class Reshape(TensorOp):
         return reshape(out_grad, node.inputs[0].shape)
         ### END YOUR SOLUTION
     
-    def map_tvm(self, bb, node_map, node):
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         def compute_size(shape):
             size = 1
             for dim in shape:
@@ -284,7 +284,7 @@ class BroadcastTo(TensorOp):
         return reshape(res, orig_shape)
         ### END YOUR SOLUTION
     
-    def map_tvm(self, bb, node_map, node):
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         def te_broadcast_to(A):
             # Create a compute for broadcasting A to target_shape
             return te.compute(
@@ -370,7 +370,7 @@ class MatMul(TensorOp):
         return (grad_a, grad_b)
         ### END YOUR SOLUTION
 
-    def map_tvm(self, bb, node_map, node):
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
         def te_matmul(A, B):
@@ -450,7 +450,7 @@ class ReLU(TensorOp):
         return res
         ### END YOUR SOLUTION
     
-    def map_tvm(self, bb, node_map, node):
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         def te_relu(A):
             return te.compute(A.shape, lambda *i: te.max(A(*i), 0), name="relu")
 

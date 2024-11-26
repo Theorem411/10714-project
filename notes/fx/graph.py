@@ -825,7 +825,7 @@ class _FindNodesLookupTable:
         return [node for node in self.table[(op, None)].keys() if node.target == target]
 
 
-[docs]@compatibility(is_backward_compatible=True)
+@compatibility(is_backward_compatible=True)
 class Graph:
     """
     ``Graph`` is the main data structure used in the FX Intermediate Representation.
@@ -871,7 +871,7 @@ class Graph:
     """
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def __init__(self, owning_module: Optional["GraphModule"] = None, tracer_cls: Optional[Type["Tracer"]] = None,
                  tracer_extras: Optional[Dict[str, Any]] = None):
         """
@@ -914,7 +914,7 @@ class Graph:
         return _node_list(self)
 
 
-[docs]    @compatibility(is_backward_compatible=False)
+    @compatibility(is_backward_compatible=False)
     def find_nodes(self, *, op: str, target: Optional['Target'] = None, sort: bool = True):
         """
         Allows for fast query of nodes
@@ -940,7 +940,7 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def graph_copy(self, g : 'Graph', val_map : Dict[Node, Node], return_output_node=False) -> 'Optional[Argument]':
         """
         Copy all nodes from a given graph into ``self``.
@@ -987,7 +987,7 @@ class Graph:
         return g
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def create_node(self, op: str, target: 'Target',
                     args: Optional[Tuple['Argument', ...]] = None,
                     kwargs: Optional[Dict[str, 'Argument']] = None,
@@ -1041,7 +1041,7 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=False)
+    @compatibility(is_backward_compatible=False)
     def process_inputs(self, *args):
         """
         Processes args so that they can be passed to the FX graph.
@@ -1050,14 +1050,14 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=False)
+    @compatibility(is_backward_compatible=False)
     def process_outputs(self, out):
         return self._codegen.process_outputs(out)
 
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def erase_node(self, to_erase : Node) -> None:
         """
         Erases a ``Node`` from the ``Graph``. Throws an exception if
@@ -1096,7 +1096,7 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def inserting_before(self, n: Optional[Node] = None):
         """Set the point at which create_node and companion methods will insert into the graph.
         When used within a 'with' statement, this will temporary set the insert point and
@@ -1122,7 +1122,7 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def inserting_after(self, n: Optional[Node] = None):
         """Set the point at which create_node and companion methods will insert into the graph.
         When used within a 'with' statement, this will temporary set the insert point and
@@ -1148,7 +1148,7 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def placeholder(self, name: str, type_expr: Optional[Any] = None,
                     default_value : Any = inspect.Signature.empty) -> Node:
         """
@@ -1179,7 +1179,7 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def get_attr(self, qualified_name: str, type_expr: Optional[Any] = None) -> Node:
         """
         Insert a ``get_attr`` node into the Graph. A ``get_attr`` ``Node`` represents the
@@ -1240,7 +1240,7 @@ class Graph:
 
 
 
-[docs]    @compatibility(is_backward_compatible=True)
+    @compatibility(is_backward_compatible=True)
     def call_module(self,
                     module_name: str,
                     args: Optional[Tuple['Argument', ...]] = None,
