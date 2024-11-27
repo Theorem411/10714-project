@@ -268,6 +268,10 @@ if __name__ == "__main__":
     module.show()
 
     # optimize IRModule
+    module = tune_tir(module, "te_matmul", target=config["target"])
+    module.show()
+
+    # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
     module = tvm.ir.transform.Sequential(
       [
