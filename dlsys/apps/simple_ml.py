@@ -296,12 +296,20 @@ if __name__ == "__main__":
     module.show()
 
     # compile IRModule
+    # with transform.PassContext(opt_level=4):
+    #   print('='*5 + " Apply meta_schedule..." + '='*5)
+    #   database = meta_schedule.Database.create_workload(module)
+    #   module = meta_schedule.apply(module, target=target, database=database)
+    # module_ex = relax.build(module, target=config["target"])
+    # module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     with transform.PassContext(opt_level=4):
-      print('='*5 + " Apply meta_schedule..." + '='*5)
-      database = meta_schedule.Database.create_workload(module)
-      module = meta_schedule.apply(module, target=target, database=database)
-    module_ex = relax.build(module, target=config["target"])
-    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+      module_ex = relax.build(module, target=config["target"])
+      print('='*5 + " transformed module" + '='*5)
+      # module_ex.ir_mod.show()
+      module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+      # prof.run(lambda: module_vm["main"](tvm.nd.array(x)))
+      # prof.show()
+
     
     # evaluate average runtime across batches
     X_out = evaluate_epoch_mlp(model, module_vm, dim=config["dim"], num_batches=config["num_batches"], batch_size=config["batch_size"])
