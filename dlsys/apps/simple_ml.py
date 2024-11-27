@@ -286,8 +286,25 @@ if __name__ == "__main__":
     # compile IRModule
     with transform.PassContext(opt_level=4):
       print('='*5 + " Apply meta_schedule..." + '='*5)
-      database = meta_schedule.Database.create_workload(module)
-      module = meta_schedule.apply(module, target=target, database=database)
+      module = relax.transform.LowerToTensorIR()(module)
+
+      database = MemoryDatabase()
+
+      # Tune the specified TIR function
+      database = ms.tune_tir(
+          mod=module,                 
+          target=config["target"],    
+          max_trials_global=5000,  # Total tuning trials
+          num_trials_per_iter=128,  # Trials per tuning iteration
+          work_dir=None,          # Directory to store logs
+      )
+
+      module = meta_schedule.apply(module, target=config["target"], database=database)
+
+    print('='*5 + " auto-tuned module " + '='*5)
+    module.show()
+
+    # build and execute the IRModule
     module_ex = relax.build(module, target=config["target"])
     module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     
