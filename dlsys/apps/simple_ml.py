@@ -225,7 +225,34 @@ def evaluate_epoch_mlp(dataloader, model, module, loss_fn=nn.SoftmaxLoss(), opt=
 #     ### BEGIN YOUR SOLUTION
 #     return epoch_general_ptb(data, model, seq_len, loss_fn())
 #     ### END YOUR SOLUTION
+def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, work_dir="./tune_tmp"):
+    # Create a tuning database
+    mod_func = tvm.IRModule.from_expr(module[func_name].with_attr("global_symbol", "main"))
 
+    database = MemoryDatabase()
+
+    # Tune the specified TIR function
+    database = ms.tune_tir(
+        mod=mod_func,                 # Input module
+        target=target,              # Target platform (e.g., "llvm", "cuda")
+        max_trials_global=max_trials,  # Total tuning trials
+        num_trials_per_iter=num_trials_per_iter,  # Trials per tuning iteration
+        work_dir=work_dir,          # Directory to store logs
+    )
+
+    # Compile the tuned TIR function into a new IRModule
+    sch = ms.tir_integration.compile_tir(
+        database=database,          # The tuning database
+        mod=mod_func,                 # Input module to compile
+        target=target               # Target platform
+    )
+
+    updated_mod = sch.mod["main"].with_attr("global_symbol", "te_matmul")
+    gv = module.get_global_var("te_matmul")
+    module.update_func(gv, updated_mod)
+    
+    # Return the optimized module
+    return module
 
 if __name__ == "__main__":
     #########################################################
@@ -259,6 +286,10 @@ if __name__ == "__main__":
     print('='*5 + " original module" + '='*5)
     module.show()
 
+    # meta-scheduling
+    module = tune_tir(module, "te_matmul", target=config["target"])
+    module.show()
+
     # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
     module = tvm.ir.transform.Sequential(
@@ -268,7 +299,9 @@ if __name__ == "__main__":
         tvm.relax.transform.FuseTIR(),
       ])(module)
     print('='*5 + " transformed module" + '='*5)
+
     module.show()
+
 
     # compile IRModule
     with transform.PassContext(opt_level=4):
