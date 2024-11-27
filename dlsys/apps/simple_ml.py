@@ -20,6 +20,7 @@ from models import *
 from contextlib import contextmanager
 import time
 import tvm.meta_schedule as ms
+from tvm.meta_schedule.database import MemoryDatabase
 
 ## Timer 
 @contextmanager
