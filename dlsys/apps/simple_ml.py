@@ -209,10 +209,8 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     # Create a tuning database
     mod_func = tvm.IRModule.from_expr(module[func_name].with_attr("global_symbol", "main"))
 
-    database = MemoryDatabase()
-
     # Tune the specified TIR function
-    database = ms.tune_tir(
+    database = meta_schedule.tune_tir(
         mod=mod_func,                 # Input module
         target=target,              # Target platform (e.g., "llvm", "cuda")
         max_trials_global=max_trials,  # Total tuning trials
@@ -221,14 +219,14 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     )
 
     # Compile the tuned TIR function into a new IRModule
-    sch = ms.tir_integration.compile_tir(
+    sch = meta_schedule.tir_integration.compile_tir(
         database=database,          # The tuning database
         mod=mod_func,                 # Input module to compile
         target=target               # Target platform
     )
 
-    updated_mod = sch.mod["main"].with_attr("global_symbol", "te_matmul")
-    gv = module.get_global_var("te_matmul")
+    updated_mod = sch.mod["main"].with_attr("global_symbol", func_name)
+    gv = module.get_global_var(func_name)
     module.update_func(gv, updated_mod)
     
     # Return the optimized module
@@ -287,16 +285,16 @@ if __name__ == "__main__":
     with transform.PassContext(opt_level=4):
       print('='*5 + " Apply meta_schedule..." + '='*5)
       # Tune the specified TIR function
-      database = ms.tune_tir(
-          mod=module,                 
-          target=config["target"],    
-          max_trials_global=64,  # Total tuning trials
-          num_trials_per_iter=64,  # Trials per tuning iteration
-          work_dir=None,          # Directory to store logs
-      )
+      # database = meta_schedule.tune_tir(
+      #     mod=module,                 
+      #     target=config["target"],    
+      #     max_trials_global=64,  # Total tuning trials
+      #     num_trials_per_iter=64,  # Trials per tuning iteration
+      #     work_dir="./mlp-meta-sched",          # Directory to store logs
+      # )
 
-      module = meta_schedule.tir_integration.compile_tir(database, module, target=config["target"])
-
+      # module = meta_schedule.tir_integration.compile_tir(database, module, target=config["target"])
+      tune_tir(module, "fused_te_matmul_te_broadcast_to_te_ewise_add_te_relu", "llvm -num-cores=1", max_trials=5, num_trials_per_iter=5)
     print('='*5 + " auto-tuned module " + '='*5)
     module.show()
 
