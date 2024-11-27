@@ -263,7 +263,7 @@ if __name__ == "__main__":
     # Needle model
     #########################################################
     # generate tvm IRModule using Tensor graph
-    module = to_tvm_tensor(model, False, ndl.Tensor(x, device=config["device"]))
+    module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
     print('='*5 + " original module" + '='*5)
     module.show()
 
@@ -286,20 +286,16 @@ if __name__ == "__main__":
     # compile IRModule
     with transform.PassContext(opt_level=4):
       print('='*5 + " Apply meta_schedule..." + '='*5)
-      module = relax.transform.LowerToTensorIR()(module)
-
-      database = MemoryDatabase()
-
       # Tune the specified TIR function
       database = ms.tune_tir(
           mod=module,                 
           target=config["target"],    
-          max_trials_global=5000,  # Total tuning trials
-          num_trials_per_iter=128,  # Trials per tuning iteration
+          max_trials_global=64,  # Total tuning trials
+          num_trials_per_iter=64,  # Trials per tuning iteration
           work_dir=None,          # Directory to store logs
       )
 
-      module = meta_schedule.apply(module, target=config["target"], database=database)
+      module = meta_schedule.tir_integration.compile_tir(database, module, target=config["target"])
 
     print('='*5 + " auto-tuned module " + '='*5)
     module.show()
