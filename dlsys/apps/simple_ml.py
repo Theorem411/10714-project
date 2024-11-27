@@ -252,7 +252,7 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     module.update_func(gv, updated_mod)
     
     # Return the optimized module
-    return module
+    return module 
 
 if __name__ == "__main__":
     #########################################################
