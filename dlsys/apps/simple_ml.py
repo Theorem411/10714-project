@@ -4,7 +4,7 @@ import struct
 import gzip
 import numpy as np
 import tvm
-from tvm import relax, transform
+from tvm import relax, transform, meta_schedule
 from tvm import ir
 
 import sys
@@ -209,10 +209,8 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     # Create a tuning database
     mod_func = tvm.IRModule.from_expr(module[func_name].with_attr("global_symbol", "main"))
 
-    database = MemoryDatabase()
-
     # Tune the specified TIR function
-    database = ms.tune_tir(
+    database = meta_schedule.tune_tir(
         mod=mod_func,                 # Input module
         target=target,              # Target platform (e.g., "llvm", "cuda")
         max_trials_global=max_trials,  # Total tuning trials
@@ -221,18 +219,18 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     )
 
     # Compile the tuned TIR function into a new IRModule
-    sch = ms.tir_integration.compile_tir(
+    sch = meta_schedule.tir_integration.compile_tir(
         database=database,          # The tuning database
         mod=mod_func,                 # Input module to compile
         target=target               # Target platform
     )
 
-    updated_mod = sch.mod["main"].with_attr("global_symbol", "te_matmul")
-    gv = module.get_global_var("te_matmul")
+    updated_mod = sch.mod["main"].with_attr("global_symbol", func_name)
+    gv = module.get_global_var(func_name)
     module.update_func(gv, updated_mod)
     
     # Return the optimized module
-    return module
+    return module 
 
 if __name__ == "__main__":
     #########################################################
@@ -263,9 +261,13 @@ if __name__ == "__main__":
     # Needle model
     #########################################################
     # generate tvm IRModule using Tensor graph
-    module = to_tvm_tensor(model, False, ndl.Tensor(x, device=config["device"]))
+    module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
     print('='*5 + " original module" + '='*5)
     module.show()
+
+    # optimize IRModule
+    # module = tune_tir(module, "te_matmul", target=config["target"])
+    # module.show()
 
     # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
@@ -281,9 +283,24 @@ if __name__ == "__main__":
 
     # compile IRModule
     with transform.PassContext(opt_level=4):
-      module_ex = relax.build(module, target=config["target"])
-      module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+      print('='*5 + " Apply meta_schedule..." + '='*5)
+      # Tune the specified TIR function
+      # database = meta_schedule.tune_tir(
+      #     mod=module,                 
+      #     target=config["target"],    
+      #     max_trials_global=64,  # Total tuning trials
+      #     num_trials_per_iter=64,  # Trials per tuning iteration
+      #     work_dir="./mlp-meta-sched",          # Directory to store logs
+      # )
+
+      # module = meta_schedule.tir_integration.compile_tir(database, module, target=config["target"])
+      tune_tir(module, "fused_te_matmul_te_broadcast_to_te_ewise_add_te_relu", "llvm -num-cores=1", max_trials=5, num_trials_per_iter=5)
+    print('='*5 + " auto-tuned module " + '='*5)
+    module.show()
+
+    # build and execute the IRModule
+    module_ex = relax.build(module, target=config["target"])
+    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     
+    # evaluate average runtime across batches
     X_out = evaluate_epoch_mlp(model, module_vm, dim=config["dim"], num_batches=config["num_batches"], batch_size=config["batch_size"])
-    # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
-    # print("MyModelWithParams_before time-cost: %g ms" % (ftimer(tvm.nd.array(x)).mean * 1000))
