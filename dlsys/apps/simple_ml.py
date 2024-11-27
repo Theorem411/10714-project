@@ -26,7 +26,7 @@ def timer(model_name: str):
     start_time = time.perf_counter()
     yield
     end_time = time.perf_counter()
-    print(f"{model_name} Execution time: {end_time - start_time:.6f} seconds")
+    # print(f"{model_name} Execution time: {end_time - start_time:.6f} seconds")
 
 
 device = ndl.cpu()
@@ -72,7 +72,10 @@ def evaluate_epoch_mlp(model, module, dim, num_batches, batch_size):
         ndl_time += ndl_batch_time
         tvm_time += tvm_batch_time
     
-    return ndl_time / num_batches, tvm_time / num_batches
+    avg_ndl_time, avg_tvm_time = ndl_time / num_batches, tvm_time / num_batches
+    print(f'\n\n\n {"-"*50} \nAVG NDL TIME: {avg_ndl_time} \tAVG TVM TIME: {avg_tvm_time}')
+    
+    return 
 
 ### PTB training ###
 # def get_batch(batches, i, bptt, device=None, dtype=None):
@@ -264,10 +267,6 @@ if __name__ == "__main__":
     print('='*5 + " original module" + '='*5)
     module.show()
 
-    # meta-scheduling
-    module = tune_tir(module, "te_matmul", target=config["target"])
-    module.show()
-
     # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
     module = tvm.ir.transform.Sequential(
@@ -279,7 +278,6 @@ if __name__ == "__main__":
     print('='*5 + " transformed module" + '='*5)
 
     module.show()
-
 
     # compile IRModule
     with transform.PassContext(opt_level=4):
