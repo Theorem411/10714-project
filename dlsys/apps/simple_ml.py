@@ -38,64 +38,41 @@ def evaluate_batch_mlp(model, module, X: np.ndarray):
     input_tvm = tvm.nd.array(X)
     
     # performance
+    start_time = time.perf_counter()
     with timer("needle"):
       ndl_out = model(input_ndl)
+    ndl_time = time.perf_counter() - start_time
 
+    start_time = time.perf_counter()
     with timer("tvm"):
       tvm_out = module["main"](input_tvm)
-
+    tvm_time = time.perf_counter() - start_time
     # correctness: 
     assert np.allclose(tvm_out.asnumpy(),ndl_out.numpy(), atol=1e-4) # tweak tolerance if fails
 
-    return ndl_out
+    return ndl_time, tvm_time
 
     
     
-def evaluate_epoch_mlp(dataloader, model, module, loss_fn=nn.SoftmaxLoss(), opt=None):
+def evaluate_epoch_mlp(model, module, dim, num_batches, batch_size):
     """
-      Iterates over the dataloader. If optimizer is not None, sets the
-      model to train mode, and for each batch updates the model parameters.
-      If optimizer is None, sets the model to eval mode, and simply computes
-      the loss/accuracy.
-
-      Args:
-          dataloader: Dataloader instance
-          model: nn.Module instance
-          loss_fn: nn.Module instance
-          opt: Optimizer instance (optional)
-
-      Returns:
-          avg_acc: average accuracy over dataset
-          avg_loss: average loss over dataset
+      
     """
     np.random.seed(4)
-    ### BEGIN YOUR SOLUTION
-    train = opt is not None
-    losses = []
-    
-    correct = 0
+    model.eval()
 
-    total = 0
+    ndl_time = 0
+    tvm_time = 0
 
-    for i, (X, y) in enumerate(dataloader):
+    for _ in range(num_batches):
         # set needle model to forward mode
-        model.eval()
-        
-        # out = model.forward(X)
-        out = evaluate_batch_mlp(model, module, X)
-        loss = loss_fn(out, y)
+        X = np.random.rand(batch_size, dim).astype(np.float32)
+        ndl_batch_time, tvm_batch_time = evaluate_batch_mlp(model, module, X)
 
-        losses.append(loss.numpy().item())
-        correct += np.sum(out.numpy().argmax(axis=1) == y)
-
-        total += y.size
+        ndl_time += ndl_batch_time
+        tvm_time += tvm_batch_time
     
-    avg_loss = np.mean(losses)
-    avg_acc = correct / total
-    return avg_acc, avg_loss
-    ### END YOUR SOLUTION
-
-
+    return ndl_time / num_batches, tvm_time / num_batches
 
 ### PTB training ###
 # def get_batch(batches, i, bptt, device=None, dtype=None):
@@ -225,7 +202,34 @@ def evaluate_epoch_mlp(dataloader, model, module, loss_fn=nn.SoftmaxLoss(), opt=
 #     ### BEGIN YOUR SOLUTION
 #     return epoch_general_ptb(data, model, seq_len, loss_fn())
 #     ### END YOUR SOLUTION
+def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, work_dir="./tune_tmp"):
+    # Create a tuning database
+    mod_func = tvm.IRModule.from_expr(module[func_name].with_attr("global_symbol", "main"))
 
+    database = MemoryDatabase()
+
+    # Tune the specified TIR function
+    database = ms.tune_tir(
+        mod=mod_func,                 # Input module
+        target=target,              # Target platform (e.g., "llvm", "cuda")
+        max_trials_global=max_trials,  # Total tuning trials
+        num_trials_per_iter=num_trials_per_iter,  # Trials per tuning iteration
+        work_dir=work_dir,          # Directory to store logs
+    )
+
+    # Compile the tuned TIR function into a new IRModule
+    sch = ms.tir_integration.compile_tir(
+        database=database,          # The tuning database
+        mod=mod_func,                 # Input module to compile
+        target=target               # Target platform
+    )
+
+    updated_mod = sch.mod["main"].with_attr("global_symbol", "te_matmul")
+    gv = module.get_global_var("te_matmul")
+    module.update_func(gv, updated_mod)
+    
+    # Return the optimized module
+    return module
 
 if __name__ == "__main__":
     #########################################################
@@ -240,6 +244,7 @@ if __name__ == "__main__":
         "device" :      ndl.cpu(),
         "target" :      tvm.target.Target("llvm"),
         "tvm_device":   tvm.cpu(),
+        "num_batches":  100
     }
 
     # input
@@ -259,6 +264,10 @@ if __name__ == "__main__":
     print('='*5 + " original module" + '='*5)
     module.show()
 
+    # meta-scheduling
+    module = tune_tir(module, "te_matmul", target=config["target"])
+    module.show()
+
     # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
     module = tvm.ir.transform.Sequential(
@@ -268,13 +277,15 @@ if __name__ == "__main__":
         tvm.relax.transform.FuseTIR(),
       ])(module)
     print('='*5 + " transformed module" + '='*5)
+
     module.show()
+
 
     # compile IRModule
     with transform.PassContext(opt_level=4):
       module_ex = relax.build(module, target=config["target"])
       module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     
-    X_out = evaluate_batch_mlp(model, module_vm, x)
+    X_out = evaluate_epoch_mlp(model, module_vm, dim=config["dim"], num_batches=config["num_batches"], batch_size=config["batch_size"])
     # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
     # print("MyModelWithParams_before time-cost: %g ms" % (ftimer(tvm.nd.array(x)).mean * 1000))
