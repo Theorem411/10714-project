@@ -4,7 +4,7 @@ import struct
 import gzip
 import numpy as np
 import tvm
-from tvm import relax, transform
+from tvm import relax, transform, meta_schedule
 from tvm import ir
 
 import sys
@@ -285,9 +285,10 @@ if __name__ == "__main__":
 
     # compile IRModule
     with transform.PassContext(opt_level=4):
-      module_ex = relax.build(module, target=config["target"])
-      module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+      database = meta_schedule.Database.create_workload(module)
+      module = meta_schedule.apply(module, target=target, database=database)
+    module_ex = relax.build(module, target=config["target"])
+    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     
+    # evaluate average runtime across batches
     X_out = evaluate_epoch_mlp(model, module_vm, dim=config["dim"], num_batches=config["num_batches"], batch_size=config["batch_size"])
-    # ftimer = vm.module.time_evaluator("main", tvm.cpu(), number=100)
-    # print("MyModelWithParams_before time-cost: %g ms" % (ftimer(tvm.nd.array(x)).mean * 1000))
