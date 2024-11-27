@@ -232,7 +232,7 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     module.update_func(gv, updated_mod)
     
     # Return the optimized module
-    return module
+    return module 
 
 if __name__ == "__main__":
     #########################################################
@@ -267,6 +267,10 @@ if __name__ == "__main__":
     print('='*5 + " original module" + '='*5)
     module.show()
 
+    # meta-scheduling
+    module = tune_tir(module, "te_matmul", target=config["target"])
+    module.show()
+
     # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
     module = tvm.ir.transform.Sequential(
@@ -278,6 +282,7 @@ if __name__ == "__main__":
     print('='*5 + " transformed module" + '='*5)
 
     module.show()
+
 
     # compile IRModule
     with transform.PassContext(opt_level=4):

@@ -3,8 +3,9 @@ project(needle C CXX)
 cmake_policy(SET CMP0146 OLD)
 
 # find correct version of Python
-execute_process(COMMAND python3-config --prefix
-  OUTPUT_VARIABLE Python_ROOT_DIR)
+# execute_process(COMMAND python3-config --prefix
+#   OUTPUT_VARIABLE Python_ROOT_DIR)
+set(PYTHON_EXECUTABLE "~/miniforge3/bin/python")
 find_package(Python COMPONENTS Development Interpreter REQUIRED)
 include_directories(${Python_INCLUDE_DIRS})
 
