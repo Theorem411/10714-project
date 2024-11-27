@@ -268,8 +268,8 @@ if __name__ == "__main__":
     module.show()
 
     # optimize IRModule
-    module = tune_tir(module, "te_matmul", target=config["target"])
-    module.show()
+    # module = tune_tir(module, "te_matmul", target=config["target"])
+    # module.show()
 
     # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
@@ -285,6 +285,7 @@ if __name__ == "__main__":
 
     # compile IRModule
     with transform.PassContext(opt_level=4):
+      print('='*5 + " Apply meta_schedule..." + '='*5)
       database = meta_schedule.Database.create_workload(module)
       module = meta_schedule.apply(module, target=target, database=database)
     module_ex = relax.build(module, target=config["target"])
