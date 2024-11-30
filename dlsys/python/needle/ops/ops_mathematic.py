@@ -711,7 +711,7 @@ class Conv(TensorOp):
         padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
 
         def te_conv(A, B):
-            return topi.nn.conv2d(A, B, stride=stride, padding=padding)
+            return topi.nn.conv2d(A, B)
 
         return bb.emit_te(te_conv, A, B)
 
