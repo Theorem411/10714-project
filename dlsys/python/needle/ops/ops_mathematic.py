@@ -36,6 +36,8 @@ class EWiseAdd(TensorOp):
         B = node_map[node.inputs[1]]
         
         def te_ewise_add(A, B):
+            if A.shape != B.shape:
+                B = topi.broadcast_to(B, A.shape)
             return topi.add(A, B)
 
         return bb.emit_te(te_ewise_add, A, B)
