@@ -73,7 +73,6 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
               # print(f'op: {repr(node.op)}\n')
               # tvm_var = node.op.emit_te(bb, value_to_var, node)
               if te:
-                print(f'node op: {node.op}')
                 tvm_var = node.op.emit_te(bb, value_to_var, node)
               else:
                 tvm_var = node.op.emit(bb, value_to_var, node)

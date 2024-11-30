@@ -28,7 +28,7 @@ if __name__ == "__main__":
     config = {
         "batch_size" :  1,  # 8,
         "dim" :         4, # 8,
-        "n_layers":     2,   # 2
+        "n_layers":     1,   # 2
         "activation":   nn.ReLU,
         "seq_len"   :  10,
         "bias":         True,
@@ -71,16 +71,16 @@ if __name__ == "__main__":
 
     module.show()
 
-    # # compile IRModule
-    # with transform.PassContext(opt_level=4):
-    #   print('='*5 + " Apply meta_schedule..." + '='*5)
-    #   tune_tir(module, "fused_te_matmul_te_broadcast_to_te_ewise_add_te_relu", "llvm -num-cores=1", max_trials=5, num_trials_per_iter=5)
-    # print('='*5 + " auto-tuned module " + '='*5)
-    # module.show()
+    # compile IRModule
+    with transform.PassContext(opt_level=4):
+      print('='*5 + " Apply meta_schedule..." + '='*5)
+      tune_tir_all(module, "llvm -num-cores=2", max_trials=5, num_trials_per_iter=5)
+    print('='*5 + " auto-tuned module " + '='*5)
+    module.show()
 
     # build and execute the IRModule
     module_ex = relax.build(module, target=config["target"])
     module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     
     # evaluate average runtime across batches
-    X_out = evaluate_epoch_mlp(model, module_vm, dim=config["dim"], num_batches=config["num_batches"], batch_size=config["batch_size"])
+    X_out = evaluate_epoch_seq(model, module_vm, dim=config["dim"], seq_len=config["seq_len"],num_batches=config["num_batches"], batch_size=config["batch_size"])
