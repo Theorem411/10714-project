@@ -135,14 +135,7 @@ if __name__ == "__main__":
     #########################################################
     # Needle model
     #########################################################
-    model = ConvModel(
-        in_channels=config["in_channels"],
-        out_channels=config["out_channels"],
-        kernel_size=config["kernel_size"],
-        stride=config["stride"],
-        padding=config["padding"],
-        device=config["device"],
-    )
+    model = ConvModel(device=config["device"])
 
     torch_model = torch.nn.Conv2d(
         in_channels=config["in_channels"],
