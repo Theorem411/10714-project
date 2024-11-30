@@ -164,6 +164,7 @@ if __name__ == "__main__":
     torch_model.weight.data = torch.tensor(weight)
 
     x = np.random.rand(*input_shape).astype(np.float32)
+    print(f"Input shape: {x.shape}")
     torch_input = torch.tensor(x)
     tvm_input = tvm.nd.array(x)
 
