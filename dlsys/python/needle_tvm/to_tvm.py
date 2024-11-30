@@ -53,7 +53,8 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
 
   # Create the "main" function in emitted IRModule 
   topo_order = topological_sort(output_tensor)
-  print(f"topo_order: {topo_order}")
+  [print(node.op) for node in topo_order]
+#   print(f"topo_order: {topo_order}")
 #   [print(f"leaf or op : {x.is_leaf() or x.op} is placeholder?: {x.placeholder} \n {x} \n{'-'*30}\n") for x in topo_order]
   with bb.function("main"):
       with bb.dataflow():
