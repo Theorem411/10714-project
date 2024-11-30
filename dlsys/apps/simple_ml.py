@@ -144,7 +144,9 @@ if __name__ == "__main__":
     # TVM model
     #########################################################
     # IRModule load/store path
-    module_lib_dir = os.makedirs("./module_lib", exist_ok=True)
+    current_file_path = os.path.dirname(os.path.abspath(__file__))  # Absolute path to the current script
+    current_file_path = os.path.join(current_file_path, "./module_lib")
+    module_lib_dir = os.makedirs(current_file_path, exist_ok=True)
     module_path = os.path.join(module_lib_dir, f"mlp-{config["device"]}.so")
     
     try: 
