@@ -37,6 +37,7 @@ class ConvModel(nn.Module):
         output_width = ((32 - kernel_size + 2 * padding) // stride) + 1
         flattened_dim = out_channels * output_height * output_width
         # Fully connected layer to reduce to linear_output_dim
+        print(f"Flattened dim: {flattened_dim}, output_dim: {output_dim}")
         self.fc = nn.Linear(flattened_dim, output_dim, device=device)
 
     def forward(self, x):
