@@ -721,29 +721,25 @@ class Conv(TensorOp):
         ### END YOUR SOLUTION
   
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        A = node_map[node.inputs[0]]
-        B = node_map[node.inputs[1]]
+        """
+        Emit tensor expression for the conv2d operation.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor
+        B = node_map[node.inputs[1]]  # Filter tensor
 
+        # Handle stride and padding
         stride = (self.stride, self.stride) if isinstance(self.stride, int) else self.stride
         padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
+        dilation = (1, 1)  # Default dilation
 
+        # Define the TE function
         def te_conv(A, B):
-            return topi.nn.conv2d(A, B)
+            return topi.nn.conv2d(A, B, strides=stride, padding=padding, dilation=dilation)
 
-        return bb.emit_te(te_conv, A, B)
+        # Emit the TE operation
+        result = bb.emit_te(te_conv, A, B)
+        return result
 
-    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
-        A = node_map[node.inputs[0]]
-        B = node_map[node.inputs[1]]
-
-        stride = (self.stride, self.stride) if isinstance(self.stride, int) else self.stride
-        padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
-
-        # Use Relax's conv2d operator
-        conv_expr = relax.op.nn.conv2d(A, B, strides=stride, padding=padding)
-
-        # Emit the operation
-        return bb.emit(conv_expr)
 
 def conv(a, b, stride=1, padding=1):
     return Conv(stride, padding)(a, b)
