@@ -27,24 +27,28 @@ def timer(model_name: str):
 
 
 class ConvModel(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_dim=10, device=None):
+    def __init__(self, device=None, dtype="float32"):
         super().__init__()
-        self.conv = nn.Conv(in_channels, out_channels, kernel_size, stride, padding, device=device)
-        self.flatten = nn.Flatten()
-        self.relu = nn.ReLU()
+        self.model = nn.Sequential(
+            # First Convolutional Block
+            nn.Conv(3, 16, kernel_size=7, stride=4, in_channels=16, out_channels=32, kernel_size2=3, stride2=2, device=device, dtype=dtype),
 
-        output_height = ((32 - kernel_size + 2 * padding) // stride) + 1
-        output_width = ((32 - kernel_size + 2 * padding) // stride) + 1
-        flattened_dim = out_channels * output_height * output_width
-        # Fully connected layer to reduce to linear_output_dim
-        self.fc = nn.Linear(flattened_dim, output_dim, device=device)
+            # Second Convolutional Block
+            nn.Conv(32, 64, kernel_size=3, stride=2, in_channels=64, out_channels=128, kernel_size2=3, stride2=2, device=device, dtype=dtype),
+
+            # Flatten the feature maps
+            nn.Flatten(),
+
+            # Fully Connected Layer
+            nn.Linear(128, 128, device=device, dtype=dtype),
+            nn.ReLU(),
+
+            # Output Layer
+            nn.Linear(128, 10, device=device, dtype=dtype)  # 10 classes for output
+        )
 
     def forward(self, x):
-        x = self.conv(x)
-        x = self.flatten(x)
-        x = self.relu(x)
-        x = self.fc(x)  # Map to 10-dimensional output
-        return x
+        return self.model(x)
 
 # Performance evaluation
 def evaluate_batch_conv(model, module, X: np.ndarray):
