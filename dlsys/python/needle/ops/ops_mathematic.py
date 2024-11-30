@@ -34,7 +34,7 @@ class EWiseAdd(TensorOp):
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
         
-        print(A.asnumpy().shape, B.asnumpy().shape)
+        print(A.numpy().shape, B.numpy().shape)
         def te_ewise_add(A, B):
             return topi.add(A, B)
 
