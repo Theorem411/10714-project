@@ -27,16 +27,23 @@ def timer(model_name: str):
 
 
 class ConvModel(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, linear_output_dim=10, device=None):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_dim=10, device=None):
         super().__init__()
         self.conv = nn.Conv(in_channels, out_channels, kernel_size, stride, padding, device=device)
         self.flatten = nn.Flatten()
         self.relu = nn.ReLU()
 
+        output_height = ((32 - kernel_size + 2 * padding) // stride) + 1
+        output_width = ((32 - kernel_size + 2 * padding) // stride) + 1
+        flattened_dim = out_channels * output_height * output_width
+        # Fully connected layer to reduce to linear_output_dim
+        self.fc = nn.Linear(flattened_dim, output_dim, device=device)
+
     def forward(self, x):
         x = self.conv(x)
         x = self.flatten(x)
         x = self.relu(x)
+        x = self.fc(x)  # Map to 10-dimensional output
         return x
 
 # Performance evaluation
@@ -185,7 +192,6 @@ if __name__ == "__main__":
     # module.show()
 
     # Build and execute
-    print("build")
     module_ex = relax.build(module, target=config["target"])
     module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
 
