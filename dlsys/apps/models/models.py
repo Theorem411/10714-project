@@ -35,13 +35,13 @@ class ResNet9(ndl.nn.Module):
         ### BEGIN YOUR SOLUTION ###
         self.model = nn.Sequential(
             ConvBN(3,16,7,4,16,32,3,2,device,dtype),
-            ResidualConvBN(32,32,3,1,32,32,3,1,device,dtype),
+            # ResidualConvBN(32,32,3,1,32,32,3,1,device,dtype),
             ConvBN(32,64,3,2,64,128,3,2,device,dtype),
-            ResidualConvBN(128,128,3,1,128,128,3,1,device,dtype),
+            # ResidualConvBN(128,128,3,1,128,128,3,1,device,dtype),
             nn.Flatten(),
-            # nn.Linear(128, 128, device=device, dtype=dtype),
+            nn.Linear(128, 128, device=device, dtype=dtype),
             nn.ReLU(),
-            # nn.Linear(128, 10, device=device, dtype=dtype),
+            nn.Linear(128, 10, device=device, dtype=dtype),
         )
         ### END YOUR SOLUTION
 
