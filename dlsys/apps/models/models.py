@@ -9,10 +9,10 @@ np.random.seed(0)
 def ResidualConvBN(a1,b1,k1,s1,a2,b2,k2,s2, device=None, dtype="float32"):
     block = nn.Residual(nn.Sequential(
             nn.Conv(in_channels=a1, out_channels=b1, kernel_size=k1, stride=s1, bias=True, device=device, dtype=dtype),
-            # nn.BatchNorm2d(b1, device=device),
+            nn.BatchNorm2d(b1, device=device),
             nn.ReLU(),
             nn.Conv(in_channels=a2, out_channels=b2, kernel_size=k2, stride=s2, bias=True, device=device, dtype=dtype),
-            # nn.BatchNorm2d(b2, device=device),
+            nn.BatchNorm2d(b2, device=device),
             nn.ReLU()
         ))
     return block
@@ -20,10 +20,10 @@ def ResidualConvBN(a1,b1,k1,s1,a2,b2,k2,s2, device=None, dtype="float32"):
 def ConvBN(a1,b1,k1,s1,a2,b2,k2,s2, device=None, dtype="float32"):
     block = nn.Sequential(
             nn.Conv(in_channels=a1, out_channels=b1, kernel_size=k1, stride=s1, bias=True, device=device, dtype=dtype),
-            # nn.BatchNorm2d(b1, device=device),
+            nn.BatchNorm2d(b1, device=device),
             nn.ReLU(),
             nn.Conv(in_channels=a2, out_channels=b2, kernel_size=k2, stride=s2, bias=True, device=device, dtype=dtype),
-            # nn.BatchNorm2d(b2, device=device),
+            nn.BatchNorm2d(b2, device=device),
             nn.ReLU()
         )
     return block
@@ -39,9 +39,9 @@ class ResNet9(ndl.nn.Module):
             ConvBN(32,64,3,2,64,128,3,2,device,dtype),
             ResidualConvBN(128,128,3,1,128,128,3,1,device,dtype),
             nn.Flatten(),
-            nn.Linear(128, 128, device=device, dtype=dtype),
+            # nn.Linear(128, 128, device=device, dtype=dtype),
             nn.ReLU(),
-            nn.Linear(128, 10, device=device, dtype=dtype),
+            # nn.Linear(128, 10, device=device, dtype=dtype),
         )
         ### END YOUR SOLUTION
 
