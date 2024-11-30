@@ -704,7 +704,29 @@ class Conv(TensorOp):
         ### END YOUR SOLUTION
   
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-      raise NotImplementedError
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+
+        stride = (self.stride, self.stride) if isinstance(self.stride, int) else self.stride
+        padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
+
+        def te_conv(A, B):
+            return topi.nn.conv2d(A, B, stride=stride, padding=padding)
+
+        return bb.emit_te(te_conv, A, B)
+
+    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+
+        stride = (self.stride, self.stride) if isinstance(self.stride, int) else self.stride
+        padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
+
+        # Use Relax's conv2d operator
+        conv_expr = relax.op.nn.conv2d(A, B, strides=stride, padding=padding)
+
+        # Emit the operation
+        return bb.emit(conv_expr)
 
 def conv(a, b, stride=1, padding=1):
     return Conv(stride, padding)(a, b)
