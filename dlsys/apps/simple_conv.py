@@ -30,23 +30,15 @@ class ConvModel(nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
         self.model = nn.Sequential(
-            # First Convolutional Block
-            nn.Conv(3, 16, kernel_size=7, stride=4, padding=3, device=device),  # Padding = 3 for same output size
-            nn.ReLU(),
-
-            # Second Convolutional Block
-            nn.Conv(16, 32, kernel_size=3, stride=2, padding=1, device=device),
-            nn.ReLU(),
-
-            # Third Convolutional Block
-            nn.Conv(32, 64, kernel_size=3, stride=2, padding=1, device=device),
+            # Single Convolutional Layer
+            nn.Conv(in_channels=3, out_channels=16, kernel_size=7, stride=4, padding=3, device=device),  # Padding = 3 for proportional size reduction
             nn.ReLU(),
 
             # Flatten the feature maps
             nn.Flatten(),
 
             # Fully Connected Layers
-            nn.Linear(64 * 14 * 14, 128, device=device, dtype=dtype),  # Compute input dimension after convs
+            nn.Linear(16 * 14 * 14, 128, device=device, dtype=dtype),  # Compute input dimension after the conv layer
             nn.ReLU(),
             nn.Linear(128, 10, device=device, dtype=dtype)  # 10 classes for output
         )
