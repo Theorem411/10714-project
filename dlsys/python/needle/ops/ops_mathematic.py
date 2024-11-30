@@ -204,6 +204,41 @@ class Transpose(TensorOp):
         return transpose(out_grad, self.axes)
         ### END YOUR SOLUTION
 
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        """
+        Emit tensor expression for transpose operation.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor
+        axes = self.axes
+
+        # Default axes if None (swap the last two dimensions)
+        if axes is None:
+            axes = list(range(len(A.shape)))
+            axes[-1], axes[-2] = axes[-2], axes[-1]
+
+        def te_transpose(A):
+            return topi.transpose(A, axes)
+
+        return bb.emit_te(te_transpose, A)
+
+    def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
+        """
+        Emit Relax operation for transpose.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor
+        axes = self.axes
+
+        # Default axes if None (swap the last two dimensions)
+        if axes is None:
+            axes = list(range(len(A.shape)))
+            axes[-1], axes[-2] = axes[-2], axes[-1]
+
+        # Use Relax's transpose operator
+        transpose_expr = relax.op.transpose(A, axes)
+
+        # Emit the operation
+        return bb.emit(transpose_expr)
+
 
 def transpose(a, axes=None):
     return Transpose(axes)(a)
