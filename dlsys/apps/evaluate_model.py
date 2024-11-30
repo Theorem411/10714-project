@@ -53,12 +53,12 @@ if __name__ == "__main__":
     # generate tvm IRModule using Tensor graph
     module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
     print('='*5 + " original module" + '='*5)
-    module.show()
-
-    # optimize IRModule
-    # module = tune_tir(module, "te_matmul", target=config["target"])
     # module.show()
 
+    print(f'\nbefore opts')
+    module_ex = relax.build(module, target=config["target"])
+    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+    X_out = evaluate_epoch_seq(model, module_vm, dim=config["dim"], seq_len=config["seq_len"],num_batches=config["num_batches"], batch_size=config["batch_size"])
     # optimize IRModule
     module = tvm.relax.transform.LegalizeOps()(module)
     module = tvm.ir.transform.Sequential(
@@ -69,18 +69,22 @@ if __name__ == "__main__":
       ])(module)
     print('='*5 + " transformed module" + '='*5)
 
-    module.show()
-
+    # module.show()
+    print(f'\nafter opts')
+    module_ex = relax.build(module, target=config["target"])
+    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+    X_out = evaluate_epoch_seq(model, module_vm, dim=config["dim"], seq_len=config["seq_len"],num_batches=config["num_batches"], batch_size=config["batch_size"])
     # compile IRModule
     with transform.PassContext(opt_level=4):
       print('='*5 + " Apply meta_schedule..." + '='*5)
       tune_tir_all(module, "llvm -num-cores=2", max_trials=5, num_trials_per_iter=5)
     print('='*5 + " auto-tuned module " + '='*5)
-    module.show()
+    # module.show()
 
     # build and execute the IRModule
     module_ex = relax.build(module, target=config["target"])
     module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     
     # evaluate average runtime across batches
+    print(f'\nafter autotune')
     X_out = evaluate_epoch_seq(model, module_vm, dim=config["dim"], seq_len=config["seq_len"],num_batches=config["num_batches"], batch_size=config["batch_size"])
