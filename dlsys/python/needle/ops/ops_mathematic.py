@@ -205,17 +205,12 @@ class Transpose(TensorOp):
         ### END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for transpose operation.
-        """
         # print(f"node_map: {list(node_map.values())}")
         A = node_map[node.inputs[0]]  # Input tensor
         print(f"type_A: {type(A)}")
         def te_transpose(A):
-            # print(topi.transpose(A, self.axes))
-            result = topi.transpose(A, self.axes)
-            print(result)
-            return result
+            # print(topi.transpose(A, self.axes)) 
+            return topi.transpose(A, self.axes)
 
         return bb.emit_te(te_transpose, A)
 
