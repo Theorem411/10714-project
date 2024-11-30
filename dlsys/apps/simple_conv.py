@@ -31,7 +31,7 @@ class ConvModel(nn.Module):
         super().__init__()
         self.model = nn.Sequential(
             # Single Convolutional Layer
-            nn.Conv(in_channels=3, out_channels=16, kernel_size=7, stride=4, padding=3, device=device),  # Padding = 3 for proportional size reduction
+            nn.Conv(in_channels=3, out_channels=16, kernel_size=3, stride=4, device=device),  # Padding = 3 for proportional size reduction
             nn.ReLU(),
 
             # Flatten the feature maps
