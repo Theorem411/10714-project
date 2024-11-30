@@ -735,6 +735,8 @@ class Conv(TensorOp):
         padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
         dilation = (1, 1)  # Default dilation
 
+        A = topi.transpose(A, axes=(0, 3, 1, 2))
+        B = topi.transpose(B, axes=(3, 2, 0, 1))
         # Define the TE function
         def te_conv(A, B):
             return topi.nn.conv2d(A, B, strides=stride, padding=padding, dilation=dilation)
