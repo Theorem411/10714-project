@@ -208,6 +208,7 @@ class Transpose(TensorOp):
         """
         Emit tensor expression for transpose operation.
         """
+        print(node_map)
         A = node_map[node.inputs[0]]  # Input tensor
         axes = self.axes
 
