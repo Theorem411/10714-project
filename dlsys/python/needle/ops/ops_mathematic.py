@@ -31,10 +31,10 @@ class EWiseAdd(TensorOp):
         return out_grad, out_grad
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        print(node.inputs[0].shape, node.inputs[1].shape)
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
         
-        print(A, B)
         def te_ewise_add(A, B):
             return topi.add(A, B)
 
