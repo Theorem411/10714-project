@@ -33,6 +33,7 @@ class EWiseAdd(TensorOp):
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
+        print(f"A_shape: {A.shape} B_shape: {B.shape}")
 
         def te_ewise_add(A, B):
             return topi.add(A, B)
@@ -737,8 +738,7 @@ class Conv(TensorOp):
             return topi.nn.conv2d(A, B, strides=stride, padding=padding, dilation=dilation)
 
         # Emit the TE operation
-        result = bb.emit_te(te_conv, A, B)
-        return result
+        return bb.emit_te(te_conv, A, B)
 
 
 def conv(a, b, stride=1, padding=1):
