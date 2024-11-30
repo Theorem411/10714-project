@@ -33,9 +33,9 @@ class EWiseAdd(TensorOp):
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
-
+        
+        print(A.shape, B.shape)
         def te_ewise_add(A, B):
-            B = topi.broadcast_to(B, A.shape)  # Broadcast B to match A's shape
             return topi.add(A, B)
 
         return bb.emit_te(te_ewise_add, A, B)
