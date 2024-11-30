@@ -15,98 +15,9 @@ from needle_tvm import *
 
 import needle.nn as nn
 from models import *
-
-from contextlib import contextmanager
-import time
-
-## Timer 
-@contextmanager
-def timer(model_name: str):
-    start_time = time.perf_counter()
-    yield
-    end_time = time.perf_counter()
-    # print(f"{model_name} Execution time: {end_time - start_time:.6f} seconds")
-
+from utils import *
 
 np.random.seed(0)
-device = ndl.cpu()
-
-### MLP performance evaluation ###
-def evaluate_batch_mlp(model, module, X: np.ndarray):
-    # input tensor wrapper
-    input_ndl = ndl.Tensor(X, device=device, requires_grad=False, placeholder=True)
-    input_tvm = tvm.nd.array(X)
-    
-    # performance
-    start_time = time.perf_counter()
-    with timer("needle"):
-      ndl_out = model(input_ndl)
-    ndl_time = time.perf_counter() - start_time
-
-    start_time = time.perf_counter()
-    with timer("tvm"):
-      tvm_out = module["main"](input_tvm)
-    tvm_time = time.perf_counter() - start_time
-    # correctness: 
-    try: 
-      assert np.allclose(tvm_out.asnumpy(),ndl_out.numpy(), atol=1e-4) # tweak tolerance if fails
-    except AssertionError: 
-      # Compute the absolute difference between two outputs
-      abs_diff = np.abs(np.linalg.norm(tvm_out.asnumpy()) - np.linalg.norm(ndl_out.numpy()))
-      print(f"TVM NDL diff norm: {abs_diff}")
-      assert False
-
-    return ndl_time, tvm_time
-
-    
-    
-def evaluate_epoch_mlp(model, module, dim, num_batches, batch_size):
-    """
-      
-    """
-    np.random.seed(4)
-    model.eval()
-
-    ndl_time = 0
-    tvm_time = 0
-
-    for _ in range(num_batches):
-        # set needle model to forward mode
-        X = np.random.rand(batch_size, dim).astype(np.float32)
-        ndl_batch_time, tvm_batch_time = evaluate_batch_mlp(model, module, X)
-
-        ndl_time += ndl_batch_time
-        tvm_time += tvm_batch_time
-    
-    avg_ndl_time, avg_tvm_time = ndl_time / num_batches, tvm_time / num_batches
-    print(f'\n\n\n {"-"*50} \nAVG NDL TIME: {avg_ndl_time} \tAVG TVM TIME: {avg_tvm_time}')
-    
-    return 
-
-def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, work_dir="./tune_tmp"):
-    # Create a tuning database
-    mod_func = tvm.IRModule.from_expr(module[func_name].with_attr("global_symbol", "main"))
-
-    # Tune the specified TIR function
-    database = meta_schedule.tune_tir(
-        mod=mod_func,                 # Input module
-        target=target,              # Target platform (e.g., "llvm", "cuda")
-        max_trials_global=max_trials,  # Total tuning trials
-        num_trials_per_iter=num_trials_per_iter,  # Trials per tuning iteration
-        work_dir=work_dir,          # Directory to store logs
-    )
-
-    # Compile the tuned TIR function into a new IRModule
-    sch = meta_schedule.tir_integration.compile_tir(
-        database=database,          # The tuning database
-        mod=mod_func,                 # Input module to compile
-        target=target               # Target platform
-    )
-
-    updated_mod = sch.mod["main"].with_attr("global_symbol", func_name)
-    gv = module.get_global_var(func_name)
-    module.update_func(gv, updated_mod)
-
 
 def getoptions():
   parser = argparse.ArgumentParser()
