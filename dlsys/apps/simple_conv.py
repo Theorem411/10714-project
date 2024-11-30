@@ -163,8 +163,8 @@ if __name__ == "__main__":
     # module.show()
 
     # Build and execute
-    module_ex = relax.build(module, target=config["target"])
-    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+    # module_ex = relax.build(module, target=config["target"])
+    # module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
 
-    # Evaluate performance
-    evaluate_epoch_conv(model, module_vm, input_shape=input_shape, num_batches=config["num_batches"])
+    # # Evaluate performance
+    # evaluate_epoch_conv(model, module_vm, input_shape=input_shape, num_batches=config["num_batches"])
