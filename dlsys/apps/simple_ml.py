@@ -1,10 +1,9 @@
 """hw1/apps/simple_ml.py"""
-
-import struct
-import gzip
+import argparse
 import numpy as np
 import tvm
 from tvm import relax, transform, meta_schedule
+from tvm.contrib import utils
 from tvm import ir
 
 import sys
@@ -77,134 +76,6 @@ def evaluate_epoch_mlp(model, module, dim, num_batches, batch_size):
     
     return 
 
-### PTB training ###
-# def get_batch(batches, i, bptt, device=None, dtype=None):
-#     """
-#     get_batch subdivides the source data into chunks of length bptt.
-#     If source is equal to the example output of the batchify function, with
-#     a bptt-limit of 2, we'd get the following two Variables for i = 0:
-#     ┌ a g m s ┐ ┌ b h n t ┐
-#     └ b h n t ┘ └ c i o u ┘
-#     Note that despite the name of the function, the subdivison of data is not
-#     done along the batch dimension (i.e. dimension 1), since that was handled
-#     by the batchify function. The chunks are along dimension 0, corresponding
-#     to the seq_len dimension in the LSTM or RNN.
-#     Inputs:
-#     batches - numpy array returned from batchify function
-#     i - index
-#     bptt - Sequence length
-#     Returns:
-#     data - Tensor of shape (bptt, bs) with cached data as NDArray
-#     target - Tensor of shape (bptt*bs,) with cached data as NDArray
-#     """
-#     ### BEGIN YOUR SOLUTION
-#     seq_len = min(bptt, len(batches) - 1 - i)
-#     data = batches[i:i+seq_len, :]
-#     target = batches[i+1:i+1+seq_len, :].flatten()
-#     return ndl.Tensor(data, device=device, dtype=dtype), ndl.Tensor(target, device=device, dtype=dtype)
-
-# def epoch_general_ptb(data, model, seq_len=40, loss_fn=nn.SoftmaxLoss(), opt=None,
-#         clip=None, device=None, dtype="float32"):
-#     """
-#     Iterates over the data. If optimizer is not None, sets the
-#     model to train mode, and for each batch updates the model parameters.
-#     If optimizer is None, sets the model to eval mode, and simply computes
-#     the loss/accuracy.
-
-#     Args:
-#         data: data of shape (nbatch, batch_size) given from batchify function
-#         model: LanguageModel instance
-#         seq_len: i.e. bptt, sequence length
-#         loss_fn: nn.Module instance
-#         opt: Optimizer instance (optional)
-#         clip: max norm of gradients (optional)
-
-#     Returns:
-#         avg_acc: average accuracy over dataset
-#         avg_loss: average loss over dataset
-#     """
-#     np.random.seed(4)
-#     ### BEGIN YOUR SOLUTION
-#     nbatch, batch_size = data.shape
-#     losses = []
-#     correct = 0
-#     total = 0
-
-#     for i in range(nbatch):
-#         if opt is not None:
-#             model.train()
-#             opt.reset_grad()
-#         else:
-#             model.eval()
-        
-#         X, y = get_batch(data, i, seq_len, device=device, dtype=dtype)
-#         if (X.shape[0] < 1): break
-#         out, _ = model.forward(X)
-#         loss = loss_fn(out, y)
-
-#         if opt is not None:
-#             loss.backward()
-#             opt.step()
-
-#         losses.append(loss.numpy().item())
-#         correct += np.sum(out.numpy().argmax(axis=1) == y)
-#         total += y.shape[0]
-    
-#     avg_loss = np.mean(losses)
-#     avg_acc = correct / total
-#     return avg_acc, avg_loss
-    
-#     ### END YOUR SOLUTION
-
-
-# def train_ptb(model, data, seq_len=40, n_epochs=1, optimizer=ndl.optim.SGD,
-#           lr=4.0, weight_decay=0.0, loss_fn=nn.SoftmaxLoss, clip=None,
-#           device=None, dtype="float32"):
-#     """
-#     Performs {n_epochs} epochs of training.
-
-#     Args:
-#         model: LanguageModel instance
-#         data: data of shape (nbatch, batch_size) given from batchify function
-#         seq_len: i.e. bptt, sequence length
-#         n_epochs: number of epochs (int)
-#         optimizer: Optimizer class
-#         lr: learning rate (float)
-#         weight_decay: weight decay (float)
-#         loss_fn: nn.Module class
-#         clip: max norm of gradients (optional)
-
-#     Returns:
-#         avg_acc: average accuracy over dataset from last epoch of training
-#         avg_loss: average loss over dataset from last epoch of training
-#     """
-#     for _ in range(n_epochs):
-#         avg_acc, avg_loss = epoch_general_ptb(data, model, seq_len, loss_fn(), optimizer(model.parameters(), lr=lr, weight_decay=weight_decay),
-#             clip, device, dtype)
-#     return avg_acc, avg_loss
-#     ### BEGIN YOUR SOLUTION
-    
-#     ### END YOUR SOLUTION
-
-# def evaluate_ptb(model, data, seq_len=40, loss_fn=nn.SoftmaxLoss,
-#         device=None, dtype="float32"):
-#     """
-#     Computes the test accuracy and loss of the model.
-
-#     Args:
-#         model: LanguageModel instance
-#         data: data of shape (nbatch, batch_size) given from batchify function
-#         seq_len: i.e. bptt, sequence length
-#         loss_fn: nn.Module class
-
-#     Returns:
-#         avg_acc: average accuracy over dataset
-#         avg_loss: average loss over dataset
-#     """
-#     np.random.seed(4)
-#     ### BEGIN YOUR SOLUTION
-#     return epoch_general_ptb(data, model, seq_len, loss_fn())
-#     ### END YOUR SOLUTION
 def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, work_dir="./tune_tmp"):
     # Create a tuning database
     mod_func = tvm.IRModule.from_expr(module[func_name].with_attr("global_symbol", "main"))
@@ -228,11 +99,24 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     updated_mod = sch.mod["main"].with_attr("global_symbol", func_name)
     gv = module.get_global_var(func_name)
     module.update_func(gv, updated_mod)
-    
-    # Return the optimized module
-    return module 
+
+
+def argparse():
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+    "-r", "--recompile",
+    action="store_true",
+    help="recompile tvm module",
+  )
+  args = parser.parse_args()
+  return args
 
 if __name__ == "__main__":
+    #########################################################
+    # Experiment argument parsing
+    #########################################################
+    args = argparse()
+
     #########################################################
     # Performance Benchmarking
     #########################################################
@@ -256,51 +140,50 @@ if __name__ == "__main__":
     #########################################################
     model = MLPModel(n_layers=config["n_layers"], dim=config["dim"], device=config["device"], bias=config["bias"])
 
-
     #########################################################
-    # Needle model
+    # TVM model
     #########################################################
-    # generate tvm IRModule using Tensor graph
-    module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
-    print('='*5 + " original module" + '='*5)
-    module.show()
-
-    # optimize IRModule
-    # module = tune_tir(module, "te_matmul", target=config["target"])
-    # module.show()
-
-    # optimize IRModule
-    module = tvm.relax.transform.LegalizeOps()(module)
-    module = tvm.ir.transform.Sequential(
-      [
-        tvm.relax.transform.AnnotateTIROpPattern(),
-        tvm.relax.transform.FuseOps(),
-        tvm.relax.transform.FuseTIR(),
-      ])(module)
-    print('='*5 + " transformed module" + '='*5)
-
-    module.show()
-
-    # compile IRModule
-    with transform.PassContext(opt_level=4):
-      print('='*5 + " Apply meta_schedule..." + '='*5)
-      # Tune the specified TIR function
-      # database = meta_schedule.tune_tir(
-      #     mod=module,                 
-      #     target=config["target"],    
-      #     max_trials_global=64,  # Total tuning trials
-      #     num_trials_per_iter=64,  # Trials per tuning iteration
-      #     work_dir="./mlp-meta-sched",          # Directory to store logs
-      # )
-
-      # module = meta_schedule.tir_integration.compile_tir(database, module, target=config["target"])
-      tune_tir(module, "fused_te_matmul_te_broadcast_to_te_ewise_add_te_relu", "llvm -num-cores=1", max_trials=5, num_trials_per_iter=5)
-    print('='*5 + " auto-tuned module " + '='*5)
-    module.show()
-
-    # build and execute the IRModule
-    module_ex = relax.build(module, target=config["target"])
-    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+    # IRModule load/store path
+    module_lib_dir = os.makedirs("./module_lib", exist_ok=True)
+    module_path = os.path.join(module_lib_dir, f"mlp-{config["device"]}.so")
     
+    try: 
+      # try loading stored module as shared library
+      module_ex = tvm.runtime.load_module(module_path)
+    except: 
+      # generate new tvm IRModule using Tensor graph
+      module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
+      print('='*5 + " original module" + '='*5)
+      module.show()
+
+      # optimize IRModule
+      module = tvm.relax.transform.LegalizeOps()(module)
+      module = tvm.ir.transform.Sequential(
+        [
+          tvm.relax.transform.AnnotateTIROpPattern(),
+          tvm.relax.transform.FuseOps(),
+          tvm.relax.transform.FuseTIR(),
+        ])(module)
+      print('='*5 + " transformed module" + '='*5)
+
+      module.show()
+
+      # try metaschedule on fused operator
+      with transform.PassContext(opt_level=4):
+        print('='*5 + " Apply meta_schedule..." + '='*5)
+
+        # module = meta_schedule.tir_integration.compile_tir(database, module, target=config["target"])
+        tune_tir(module, "fused_te_matmul_te_broadcast_to_te_ewise_add_te_relu", "llvm -num-cores=1", max_trials=5, num_trials_per_iter=5)
+      print('='*5 + " auto-tuned module " + '='*5)
+      module.show()
+    
+      # build and export the IRModule
+      module_ex = relax.build(module, target=config["target"])
+      module_ex.export_library(module_path)
+
+    #########################################################
+    # Compare Needle and TVM model perforamnce
+    #########################################################
+    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
     # evaluate average runtime across batches
     X_out = evaluate_epoch_mlp(model, module_vm, dim=config["dim"], num_batches=config["num_batches"], batch_size=config["batch_size"])
