@@ -137,14 +137,15 @@ if __name__ == "__main__":
     #########################################################
     # Needle model
     #########################################################
-    model = ConvModel(
-        in_channels=config["in_channels"],
-        out_channels=config["out_channels"],
-        kernel_size=config["kernel_size"],
-        stride=config["stride"],
-        padding=config["padding"],
-        device=config["device"],
-    )
+    # model = ConvModel(
+    #     in_channels=config["in_channels"],
+    #     out_channels=config["out_channels"],
+    #     kernel_size=config["kernel_size"],
+    #     stride=config["stride"],
+    #     padding=config["padding"],
+    #     device=config["device"],
+    # )
+    model = ResNet9()
 
     torch_model = torch.nn.Conv2d(
         in_channels=config["in_channels"],
@@ -194,13 +195,13 @@ if __name__ == "__main__":
     # module.show()
 
     # Build and execute
-    module_ex = relax.build(module, target=config["target"])
-    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+    # module_ex = relax.build(module, target=config["target"])
+    # module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
 
-    torch_output = torch_model(torch_input).detach().numpy()
-    tvm_output = module_vm["main"](tvm_input).asnumpy()
+    # torch_output = torch_model(torch_input).detach().numpy()
+    # tvm_output = module_vm["main"](tvm_input).asnumpy()
 
-    print(np.allclose(tvm_output, torch_output, atol=1e-4))
+    # print(np.allclose(tvm_output, torch_output, atol=1e-4))
 
-    # # Evaluate performance
-    evaluate_epoch_conv(model, module_vm, input_shape=input_shape, num_batches=config["num_batches"])
+    # # # Evaluate performance
+    # evaluate_epoch_conv(model, module_vm, input_shape=input_shape, num_batches=config["num_batches"])
