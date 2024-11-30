@@ -37,40 +37,29 @@ class Conv(Module):
         self.bias = Parameter(init.rand(out_channels, low=-bias_interval, high=bias_interval, device=device, requires_grad=True, dtype=dtype)) if bias else None
         ### END YOUR SOLUTION
 
+
     def forward(self, x: Tensor) -> Tensor:
-        ## BEGIN YOUR SOLUTION
-        # NCHW -> NHWC
-        x = x.transpose((1, 2)).transpose((2, 3))
+        ### BEGIN YOUR SOLUTION
+        def ceildiv(a, b):
+            return (a + b - 1) // b
+
+
         padding = (self.kernel_size - 1) // 2
-        x = ops.conv(x, self.weight, self.stride, padding)
+
+        res = ops.conv(self.convertToChannelLast(x), self.weight, stride=self.stride, padding=padding)
+        res = self.convertToChannelFirst(res)
+
         if self.bias is not None:
-            bias = ops.reshape(self.bias, (1, 1, 1, self.out_channels))
-            bias = ops.broadcast_to(bias, x.shape)
-            x = x + bias
-        # NHWC -> NCHW
-        return x.transpose((2, 3)).transpose((1, 2))
-        ### END YOUR SOLUTION
-
-    # def forward(self, x: Tensor) -> Tensor:
-    #     ### BEGIN YOUR SOLUTION
-    #     def ceildiv(a, b):
-    #         return (a + b - 1) // b
-
-
-    #     padding = (self.kernel_size - 1) // 2
-
-    #     res = ops.conv(self.convertToChannelLast(x), self.weight, stride=self.stride, padding=padding)
-    #     res = self.convertToChannelFirst(res)
-
-    #     if self.bias is not None:
-    #         res += ops.broadcast_to(self.bias.reshape((1, self.out_channels, 1, 1)), res.shape)
+            tmp = ops.broadcast_to(self.bias.reshape((1, self.out_channels, 1, 1)), res.shape)
+            print(f'bias shape: {tmp.shape}, res shape: {res.shape}')
+            res += tmp
 
         
-    #     return res
-    #     ### END YOUR SOLUTION
+        return res
+        ### END YOUR SOLUTION
 
-    # def convertToChannelFirst(self, x):
-    #     return ops.transpose(ops.transpose(x, (1,3)), (2,3))
+    def convertToChannelFirst(self, x):
+        return ops.transpose(ops.transpose(x, (1,3)), (2,3))
     
-    # def convertToChannelLast(self, x):
-    #     return ops.transpose(ops.transpose(x, (1,3)), (1,2))
+    def convertToChannelLast(self, x):
+        return ops.transpose(ops.transpose(x, (1,3)), (1,2))
