@@ -60,7 +60,6 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
       with bb.dataflow():
           for i, node in enumerate(topo_order):
               # Leaf nodes (inputs or constants)
-              print(node.op)
               if node.is_leaf():
                   if node.placeholder:
                       tvm_var = (relax.Var("X", relax.TensorStructInfo(node.shape, "float32")))
@@ -75,19 +74,13 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
               # Map the operation to TVM
               # print(f'op: {repr(node.op)}\n')
               # tvm_var = node.op.emit_te(bb, value_to_var, node)
-            #   print(f"value to var: {value_to_var}")
               if te:
                 tvm_var = node.op.emit_te(bb, value_to_var, node)
               else:
                 tvm_var = node.op.emit(bb, value_to_var, node)
-            #   if tvm_var is not None:
-            #      print(f"node: {node} tvm_var: {tvm_var}")
-            #   else:
-            #      print(f"node: {node} tvm_var: None")
               value_to_var[node] = tvm_var
       
           fn_output = bb.emit_output(value_to_var[topo_order[-1]])
-    #   print(f"value_to_var: {value_to_var}")
       bb.emit_func_output(value_to_var[topo_order[-1]], fn_inputs)
   return bb.get()
 
