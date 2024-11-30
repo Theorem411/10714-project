@@ -31,12 +31,12 @@ class ConvModel(nn.Module):
         super().__init__()
         self.conv = nn.Conv(in_channels, out_channels, kernel_size, stride, padding, device=device)
         self.flatten = nn.Flatten()
-        # self.fc = nn.Linear(out_channels * ((32 - kernel_size + 2 * padding) // stride + 1) ** 2, linear_output_dim, device=device)
+        self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.conv(x)
         x = self.flatten(x)
-        # x = self.fc(x)
+        x = self.relu(x)
         return x
 
 # Performance evaluation
