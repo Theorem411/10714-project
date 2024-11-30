@@ -108,7 +108,7 @@ if __name__ == "__main__":
         "out_channels": 16,
         "kernel_size": 3,
         "stride": 1,
-        "padding": 1,
+        "padding": 0,
         "input_height": 32,
         "input_width": 32,
         "device": ndl.cpu(),
