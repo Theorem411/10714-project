@@ -4,8 +4,8 @@ import needle.backend_ndarray.ndarray as ndarray
 from needle import ops
 import needle.init as init
 import numpy as np
-from .nn_sequence import Embedding
-from .nn_basic import (
+from needle.nn import Embedding
+from needle.nn import (
     Parameter, 
     Module, 
     ReLU,
@@ -111,7 +111,7 @@ class MultiHeadAttention(Module):
 
         if self.causal:
             causal_mask = self.create_causal_mask(queries_len, keys_values_len, q.device)
-            energy = energy + causal_mask.broadcast_to(energy.shape)
+            energy = energy.__add__(Tensor(causal_mask.broadcast_to(energy.shape), device=energy.device, dtype=energy.dtype))
         
         probs = self.softmax(energy)
         probs = self.dropout(probs)
@@ -316,7 +316,6 @@ class Transformer(Module):
         self.layers = Sequential(
             *[TransformerLayer(embedding_size, num_head, dim_head, hidden_size, dropout=dropout, causal=causal, device=device, dtype=dtype) for _ in range(num_layers)]
         )
-
         ### END YOUR SOLUTION
 
     def forward(
@@ -338,4 +337,4 @@ class Transformer(Module):
         if not self.batch_first:
             x = ops.transpose(x, axes=(0, 1))
 
-        return x, init.zeros_like(x)
+        return x 

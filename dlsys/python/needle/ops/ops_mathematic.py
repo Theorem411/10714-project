@@ -63,6 +63,15 @@ class AddScalar(TensorOp):
 
     def gradient(self, out_grad: Tensor, node: Tensor):
         return out_grad
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = tvm.tir.const(self.scalar, dtype="float32")
+
+        def te_add_scalar(A):
+            return topi.add(A, scalar)
+
+        return bb.emit_te(te_add_scalar, A)
 
 
 def add_scalar(a, scalar):
@@ -76,6 +85,15 @@ class EWiseMul(TensorOp):
     def gradient(self, out_grad: Tensor, node: Tensor):
         lhs, rhs = node.inputs
         return out_grad * rhs, out_grad * lhs
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+
+        def te_ewise_mul(A, B):
+            return topi.multiply(A, B)
+
+        return bb.emit_te(te_ewise_mul, A, B)
 
 
 def multiply(a, b):
@@ -91,6 +109,15 @@ class MulScalar(TensorOp):
 
     def gradient(self, out_grad: Tensor, node: Tensor):
         return (out_grad * self.scalar,)
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = self.scalar
+
+        def te_mul_scalar(A):
+            return topi.multiply(A, scalar)
+
+        return bb.emit_te(te_mul_scalar, A)
 
 
 def mul_scalar(a, scalar):
@@ -112,6 +139,15 @@ class EWisePow(TensorOp):
         dy = power(x, y) * log(x)
         return (out_grad*dx, out_grad*dy)
         ### END YOUR SOLUTION
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+
+        def te_ewise_pow(A, B):
+            return topi.power(A, B)
+
+        return bb.emit_te(te_ewise_pow, A, B)
 
 
 def power(a, b):
@@ -134,6 +170,15 @@ class PowerScalar(TensorOp):
         ### BEGIN YOUR SOLUTION
         return (out_grad * self.grad,)
         ### END YOUR SOLUTION
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = self.scalar
+
+        def te_power_scalar(A):
+            return topi.power(A, scalar)
+
+        return bb.emit_te(te_power_scalar, A)
 
 
 def power_scalar(a, scalar):
@@ -156,6 +201,15 @@ class EWiseDiv(TensorOp):
         b = out_grad * self.grad_b
         return (a, b)
         ### END YOUR SOLUTION
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+
+        def te_ewise_div(A, B):
+            return topi.divide(A, B)
+
+        return bb.emit_te(te_ewise_div, A, B)
 
 
 def divide(a, b):
@@ -175,6 +229,15 @@ class DivScalar(TensorOp):
         ### BEGIN YOUR SOLUTION
         return (out_grad / self.scalar,)
         ### END YOUR SOLUTION
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = self.scalar
+
+        def te_div_scalar(A):
+            return topi.divide(A, scalar)
+
+        return bb.emit_te(te_div_scalar, A)
 
 
 def divide_scalar(a, scalar):
@@ -203,6 +266,23 @@ class Transpose(TensorOp):
         ### BEGIN YOUR SOLUTION
         return transpose(out_grad, self.axes)
         ### END YOUR SOLUTION
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+    
+        A = node_map[node.inputs[0]]   
+        axes = [i for i in range(len(node.inputs[0].shape))]
+
+        if self.axes is None: 
+            axes[-1], axes[-2] = axes[-2], axes[-1]
+        
+        else:
+            ax1, ax2 = self.axes
+            axes[ax1], axes[ax2] = axes[ax2], axes[ax1]
+        
+        def te_transpose(A):
+            return topi.transpose(A, axes=axes)
+
+        return bb.emit_te(te_transpose, A)
 
 
 def transpose(a, axes=None):
@@ -330,7 +410,21 @@ class Summation(TensorOp):
         ## END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-      raise NotImplementedError
+        A = node_map[node.inputs[0]]  # Input tensor
+        axes = self.axes
+
+        # Determine axes for summation
+        if axes is None:
+            # Sum over all axes
+            axes = list(range(len(A.shape)))
+        elif isinstance(axes, int):
+            # Single axis
+            axes = [axes]
+
+        def te_sum(A):
+            return topi.sum(A, axis=axes)
+
+        return bb.emit_te(te_sum, A)
 
 def summation(a, axes=None):
     return Summation(axes)(a)
@@ -403,7 +497,12 @@ class Negate(TensorOp):
         ### END YOUR SOLUTION
       
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-      raise NotImplementedError
+        A = node_map[node.inputs[0]]  # Input tensor
+
+        def te_negate(A):
+            return topi.multiply(A, -1)  # Negate by multiplying with -1
+
+        return bb.emit_te(te_negate, A)
 
 
 def negate(a):
@@ -437,6 +536,14 @@ class Exp(TensorOp):
         ### BEGIN YOUR SOLUTION
         return out_grad * exp(node.inputs[0])
         ### END YOUR SOLUTION
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+
+        def te_exp(A):
+            return topi.exp(A)  # Compute element-wise exponential
+
+        return bb.emit_te(te_exp, A)
 
 
 def exp(a):

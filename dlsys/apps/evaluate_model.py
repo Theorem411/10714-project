@@ -26,10 +26,11 @@ if __name__ == "__main__":
     # Performance Benchmarking
     #########################################################
     config = {
-        "batch_size" :  32,  # 8,
-        "dim" :         512, # 8,
-        "n_layers":     8,   # 2
+        "batch_size" :  1,  # 8,
+        "dim" :         4, # 8,
+        "n_layers":     2,   # 2
         "activation":   nn.ReLU,
+        "seq_len"   :  10,
         "bias":         True,
         "device" :      ndl.cpu(),
         "target" :      tvm.target.Target("llvm"),
@@ -38,12 +39,12 @@ if __name__ == "__main__":
     }
 
     # input
-    x = np.random.rand(config["batch_size"], config["dim"]).astype(np.float32)
+    x = np.random.randint(low=0, high=config["seq_len"], size=(config["seq_len"], config["batch_size"], config["dim"])).astype(np.float32)
 
     #########################################################
     # Needle model
     #########################################################
-    model = MLPModel(dim=config["dim"], device=config["device"], bias=config["bias"])
+    model = Transformer(embedding_size=config["dim"], hidden_size=config["dim"], num_layers=config["n_layers"], sequence_len = config["seq_len"], device=config["device"])
 
 
     #########################################################
@@ -70,22 +71,12 @@ if __name__ == "__main__":
 
     module.show()
 
-    # compile IRModule
-    with transform.PassContext(opt_level=4):
-      print('='*5 + " Apply meta_schedule..." + '='*5)
-      # Tune the specified TIR function
-      # database = meta_schedule.tune_tir(
-      #     mod=module,                 
-      #     target=config["target"],    
-      #     max_trials_global=64,  # Total tuning trials
-      #     num_trials_per_iter=64,  # Trials per tuning iteration
-      #     work_dir="./mlp-meta-sched",          # Directory to store logs
-      # )
-
-      # module = meta_schedule.tir_integration.compile_tir(database, module, target=config["target"])
-      tune_tir(module, "fused_te_matmul_te_broadcast_to_te_ewise_add_te_relu", "llvm -num-cores=1", max_trials=5, num_trials_per_iter=5)
-    print('='*5 + " auto-tuned module " + '='*5)
-    module.show()
+    # # compile IRModule
+    # with transform.PassContext(opt_level=4):
+    #   print('='*5 + " Apply meta_schedule..." + '='*5)
+    #   tune_tir(module, "fused_te_matmul_te_broadcast_to_te_ewise_add_te_relu", "llvm -num-cores=1", max_trials=5, num_trials_per_iter=5)
+    # print('='*5 + " auto-tuned module " + '='*5)
+    # module.show()
 
     # build and execute the IRModule
     module_ex = relax.build(module, target=config["target"])
