@@ -35,21 +35,7 @@ if __name__ == "__main__":
     #########################################################
     args = getoptions()
 
-    #########################################################
-    # Performance Benchmarking
-    #########################################################
-    config = {
-        "batch_size" :  32,  # 8,
-        "dim" :         512, # 8,
-        "n_layers":     2,
-        "activation":   nn.ReLU,
-        "bias":         True,
-        "device" :      ndl.cpu(),
-        "target" :      tvm.target.Target("llvm"),
-        "tvm_device":   tvm.cpu(),
-        "num_batches":  100
-    }
-
+    
     # input
     x = np.random.rand(config["batch_size"], config["dim"]).astype(np.float32)
 
