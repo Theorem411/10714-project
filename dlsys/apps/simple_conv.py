@@ -43,6 +43,7 @@ class ConvModel(nn.Module):
         x = self.conv(x)
         x = self.flatten(x)
         x = self.relu(x)
+        print(f"Shape after conv: {x.shape}")
         x = self.fc(x)  # Map to 10-dimensional output
         return x
 
