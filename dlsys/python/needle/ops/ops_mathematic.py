@@ -211,10 +211,8 @@ class Transpose(TensorOp):
         def te_transpose(A):
             # print(topi.transpose(A, self.axes)) 
             return topi.transpose(A, self.axes)
-        try:
-            return bb.emit_te(te_transpose, A)
-        except:
-            print(f"failed to emit transpose")
+        
+        return bb.emit_te(te_transpose, A)
 
     def emit(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Expr], node: Tensor) -> relax.Var:
         """

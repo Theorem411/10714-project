@@ -157,7 +157,7 @@ if __name__ == "__main__":
     torch_input = torch.tensor(x)
     tvm_input = tvm.nd.array(x)
 
-    module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
+    module = to_tvm_tensor(model, False, ndl.Tensor(x, device=config["device"]))
     print("=" * 5 + " Original module " + "=" * 5)
     module.show()
 
