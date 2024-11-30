@@ -30,13 +30,13 @@ class ConvModel(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, linear_output_dim=10, device=None):
         super().__init__()
         self.conv = nn.Conv(in_channels, out_channels, kernel_size, stride, padding, device=device)
-        # self.flatten = nn.Flatten()
-        # self.fc = nn.Linear(out_channels * ((32 - kernel_size + 2 * padding) // stride + 1) ** 2, linear_output_dim, device=device)
+        self.flatten = nn.Flatten()
+        self.fc = nn.Linear(out_channels * ((32 - kernel_size + 2 * padding) // stride + 1) ** 2, linear_output_dim, device=device)
 
     def forward(self, x):
         x = self.conv(x)
-        # x = self.flatten(x)
-        # x = self.fc(x)
+        x = self.flatten(x)
+        x = self.fc(x)
         return x
 
 # Performance evaluation
