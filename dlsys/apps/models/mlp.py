@@ -14,6 +14,9 @@ from needle_tvm import to_tvm_tensor, to_tvm_fx
 from contextlib import contextmanager
 import time
 
+# Fix Linear weight initialization: necessary for load_module to work
+np.random.seed(4)
+
 @contextmanager
 def timer():
     start_time = time.perf_counter()

@@ -28,6 +28,7 @@ def timer(model_name: str):
     # print(f"{model_name} Execution time: {end_time - start_time:.6f} seconds")
 
 
+np.random.seed(0)
 device = ndl.cpu()
 
 ### MLP performance evaluation ###
@@ -47,7 +48,13 @@ def evaluate_batch_mlp(model, module, X: np.ndarray):
       tvm_out = module["main"](input_tvm)
     tvm_time = time.perf_counter() - start_time
     # correctness: 
-    assert np.allclose(tvm_out.asnumpy(),ndl_out.numpy(), atol=1e-4) # tweak tolerance if fails
+    try: 
+      assert np.allclose(tvm_out.asnumpy(),ndl_out.numpy(), atol=1e-4) # tweak tolerance if fails
+    except AssertionError: 
+      # Compute the absolute difference between two outputs
+      abs_diff = np.abs(np.linalg.norm(tvm_out.asnumpy()) - np.linalg.norm(ndl_out.numpy()))
+      print(f"TVM NDL diff norm: {abs_diff}")
+      assert False
 
     return ndl_time, tvm_time
 
@@ -101,7 +108,7 @@ def tune_tir(module, func_name, target, max_trials=64, num_trials_per_iter=64, w
     module.update_func(gv, updated_mod)
 
 
-def argparse():
+def getoptions():
   parser = argparse.ArgumentParser()
   parser.add_argument(
     "-r", "--recompile",
@@ -115,7 +122,7 @@ if __name__ == "__main__":
     #########################################################
     # Experiment argument parsing
     #########################################################
-    args = argparse()
+    args = getoptions()
 
     #########################################################
     # Performance Benchmarking
@@ -145,13 +152,16 @@ if __name__ == "__main__":
     #########################################################
     # IRModule load/store path
     current_file_path = os.path.dirname(os.path.abspath(__file__))  # Absolute path to the current script
-    current_file_path = os.path.join(current_file_path, "./module_lib")
-    module_lib_dir = os.makedirs(current_file_path, exist_ok=True)
-    module_path = os.path.join(module_lib_dir, f"mlp-{config["device"]}.so")
+    current_file_path = os.path.join(current_file_path, "module_lib")
+    os.makedirs(current_file_path, exist_ok=True)
+    module_path = os.path.join(current_file_path, f"mlp-{config['device'].name}.so")
     
     try: 
+      if args.recompile:
+        assert False
       # try loading stored module as shared library
       module_ex = tvm.runtime.load_module(module_path)
+      print(f"module reloaded from {module_path}")
     except: 
       # generate new tvm IRModule using Tensor graph
       module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
@@ -182,6 +192,7 @@ if __name__ == "__main__":
       # build and export the IRModule
       module_ex = relax.build(module, target=config["target"])
       module_ex.export_library(module_path)
+      print(f"module exported to {module_path}")
 
     #########################################################
     # Compare Needle and TVM model perforamnce
