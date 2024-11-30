@@ -20,11 +20,11 @@ def ResidualConvBN(a1,b1,k1,s1,a2,b2,k2,s2, device=None, dtype="float32"):
 def ConvBN(a1,b1,k1,s1,a2,b2,k2,s2, device=None, dtype="float32"):
     block = nn.Sequential(
             nn.Conv(in_channels=a1, out_channels=b1, kernel_size=k1, stride=s1, bias=True, device=device, dtype=dtype),
-            nn.BatchNorm2d(b1, device=device),
-            nn.ReLU(),
-            nn.Conv(in_channels=a2, out_channels=b2, kernel_size=k2, stride=s2, bias=True, device=device, dtype=dtype),
-            nn.BatchNorm2d(b2, device=device),
-            nn.ReLU()
+            # nn.BatchNorm2d(b1, device=device),
+            # nn.ReLU(),
+            # nn.Conv(in_channels=a2, out_channels=b2, kernel_size=k2, stride=s2, bias=True, device=device, dtype=dtype),
+            # nn.BatchNorm2d(b2, device=device),
+            # nn.ReLU()
         )
     return block
     
