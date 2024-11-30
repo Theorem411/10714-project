@@ -239,7 +239,7 @@ if __name__ == "__main__":
     config = {
         "batch_size" :  32,  # 8,
         "dim" :         512, # 8,
-        "n_layers":     8,   # 2
+        "n_layers":     2,
         "activation":   nn.ReLU,
         "bias":         True,
         "device" :      ndl.cpu(),
@@ -254,7 +254,7 @@ if __name__ == "__main__":
     #########################################################
     # Needle model
     #########################################################
-    model = MLPModel(dim=config["dim"], device=config["device"], bias=config["bias"])
+    model = MLPModel(n_layers=config["n_layers"], dim=config["dim"], device=config["device"], bias=config["bias"])
 
 
     #########################################################
