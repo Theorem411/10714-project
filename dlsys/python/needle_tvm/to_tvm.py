@@ -58,7 +58,7 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
 #   [print(f"leaf or op : {x.is_leaf() or x.op} is placeholder?: {x.placeholder} \n {x} \n{'-'*30}\n") for x in topo_order]
   with bb.function("main"):
       with bb.dataflow():
-          print(f"topo_order: {topo_order}")
+          print(f"length of topo_order: {len(topo_order)}")
           for i, node in enumerate(topo_order):
               # Leaf nodes (inputs or constants)
               print(node.op)
@@ -81,10 +81,10 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
                 tvm_var = node.op.emit_te(bb, value_to_var, node)
               else:
                 tvm_var = node.op.emit(bb, value_to_var, node)
-              if tvm_var is not None:
-                 print(f"node: {node} tvm_var: {tvm_var}")
-              else:
-                 print(f"node: {node} tvm_var: None")
+            #   if tvm_var is not None:
+            #      print(f"node: {node} tvm_var: {tvm_var}")
+            #   else:
+            #      print(f"node: {node} tvm_var: None")
               value_to_var[node] = tvm_var
       
           fn_output = bb.emit_output(value_to_var[topo_order[-1]])
