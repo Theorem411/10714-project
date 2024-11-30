@@ -31,25 +31,29 @@ class ConvModel(nn.Module):
         super().__init__()
         self.model = nn.Sequential(
             # First Convolutional Block
-            nn.Conv(3, 16, kernel_size=7, stride=4, in_channels=16, out_channels=32, kernel_size2=3, stride2=2, device=device, dtype=dtype),
+            nn.Conv(3, 16, kernel_size=7, stride=4, padding=3, device=device),  # Padding = 3 for same output size
+            nn.ReLU(),
 
             # Second Convolutional Block
-            nn.Conv(32, 64, kernel_size=3, stride=2, in_channels=64, out_channels=128, kernel_size2=3, stride2=2, device=device, dtype=dtype),
+            nn.Conv(16, 32, kernel_size=3, stride=2, padding=1, device=device),
+            nn.ReLU(),
+
+            # Third Convolutional Block
+            nn.Conv(32, 64, kernel_size=3, stride=2, padding=1, device=device),
+            nn.ReLU(),
 
             # Flatten the feature maps
             nn.Flatten(),
 
-            # Fully Connected Layer
-            nn.Linear(128, 128, device=device, dtype=dtype),
+            # Fully Connected Layers
+            nn.Linear(64 * 14 * 14, 128, device=device, dtype=dtype),  # Compute input dimension after convs
             nn.ReLU(),
-
-            # Output Layer
             nn.Linear(128, 10, device=device, dtype=dtype)  # 10 classes for output
         )
 
     def forward(self, x):
         return self.model(x)
-
+    
 # Performance evaluation
 def evaluate_batch_conv(model, module, X: np.ndarray):
     input_ndl = ndl.Tensor(X, device=ndl.cpu(), requires_grad=False, placeholder=True)
