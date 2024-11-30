@@ -208,9 +208,9 @@ class Transpose(TensorOp):
         """
         Emit tensor expression for transpose operation.
         """
-        print(list(node_map.values()))
+        print(f"node_map: {node_map}")
         A = node_map[node.inputs[0]]  # Input tensor
-        print(A)
+        print(f"A: {A}")
         print(f"shape: {A.shape}")
         print(f"axes: {self.axes}")
         def te_transpose(A):
