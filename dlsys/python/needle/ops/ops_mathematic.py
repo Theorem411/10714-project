@@ -735,6 +735,9 @@ class Conv(TensorOp):
 
         # Define the TE function
         def te_conv(A, B):
+            # Optionally broadcast B to match A's shape
+            if B.shape[1] != A.shape[3]:
+                B = topi.broadcast_to(B, (A.shape[3], B.shape[2], B.shape[3], B.shape[0]))
             return topi.nn.conv2d(A, B, strides=stride, padding=padding, dilation=dilation)
 
         # Emit the TE operation
