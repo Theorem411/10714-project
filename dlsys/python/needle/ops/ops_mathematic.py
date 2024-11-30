@@ -726,6 +726,7 @@ class Conv(TensorOp):
         """
         Emit tensor expression for the conv2d operation.
         """
+        print(f"conv2d: {node.inputs[0].shape} {node.inputs[1].shape}")
         A = node_map[node.inputs[0]]  # Input tensor
         B = node_map[node.inputs[1]]  # Filter tensor
 
