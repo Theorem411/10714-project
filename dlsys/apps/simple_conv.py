@@ -27,25 +27,25 @@ def timer(model_name: str):
 
 
 class ConvModel(nn.Module):
-    def __init__(self, device=None, dtype="float32"):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_dim=10, device=None):
         super().__init__()
-        self.model = nn.Sequential(
-            # Single Convolutional Layer
-            nn.Conv(in_channels=3, out_channels=16, kernel_size=3, stride=4, device=device),  # Padding = 3 for proportional size reduction
-            nn.ReLU(),
+        self.conv = nn.Conv(in_channels, out_channels, kernel_size, stride, padding, device=device)
+        self.flatten = nn.Flatten()
+        self.relu = nn.ReLU()
 
-            # Flatten the feature maps
-            nn.Flatten(),
-
-            # Fully Connected Layers
-            nn.Linear(16 * 14 * 14, 128, device=device, dtype=dtype),  # Compute input dimension after the conv layer
-            nn.ReLU(),
-            nn.Linear(128, 10, device=device, dtype=dtype)  # 10 classes for output
-        )
+        output_height = ((32 - kernel_size + 2 * padding) // stride) + 1
+        output_width = ((32 - kernel_size + 2 * padding) // stride) + 1
+        flattened_dim = out_channels * output_height * output_width
+        # Fully connected layer to reduce to linear_output_dim
+        self.fc = nn.Linear(flattened_dim, output_dim, device=device)
 
     def forward(self, x):
-        return self.model(x)
-    
+        x = self.conv(x)
+        x = self.flatten(x)
+        x = self.relu(x)
+        x = self.fc(x)  # Map to 10-dimensional output
+        return x
+
 # Performance evaluation
 def evaluate_batch_conv(model, module, X: np.ndarray):
     input_ndl = ndl.Tensor(X, device=ndl.cpu(), requires_grad=False, placeholder=True)
@@ -135,7 +135,14 @@ if __name__ == "__main__":
     #########################################################
     # Needle model
     #########################################################
-    model = ConvModel(device=config["device"])
+    model = ConvModel(
+        in_channels=config["in_channels"],
+        out_channels=config["out_channels"],
+        kernel_size=config["kernel_size"],
+        stride=config["stride"],
+        padding=config["padding"],
+        device=config["device"],
+    )
 
     torch_model = torch.nn.Conv2d(
         in_channels=config["in_channels"],
