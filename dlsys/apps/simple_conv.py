@@ -185,6 +185,7 @@ if __name__ == "__main__":
     # module.show()
 
     # Build and execute
+    print("build")
     module_ex = relax.build(module, target=config["target"])
     module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
 
