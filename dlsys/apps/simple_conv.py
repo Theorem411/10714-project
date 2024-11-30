@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # Performance Benchmarking
     #########################################################
     config = {
-        "batch_size": 32,
+        "batch_size": 8,
         "in_channels": 3,
         "out_channels": 16,
         "kernel_size": 3,
