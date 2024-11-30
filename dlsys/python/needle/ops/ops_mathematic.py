@@ -220,7 +220,7 @@ class Transpose(TensorOp):
         """
         A = node_map[node.inputs[0]]  # Input tensor
         # Use Relax's transpose operator
-        transpose_expr = relax.op.transpose(A, self.axes)
+        transpose_expr = relax.op.nn.conv2d_transpose(A, self.axes)
 
         # Emit the operation
         return bb.emit(transpose_expr)
