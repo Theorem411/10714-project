@@ -194,4 +194,4 @@ if __name__ == "__main__":
     print(np.allclose(tvm_output, torch_output, atol=1e-4))
 
     # # Evaluate performance
-    # evaluate_epoch_conv(model, module_vm, input_shape=input_shape, num_batches=config["num_batches"])
+    evaluate_epoch_conv(model, module_vm, input_shape=input_shape, num_batches=config["num_batches"])
