@@ -77,6 +77,7 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
               print(node.op)
               if te:
                 tvm_var = node.op.emit_te(bb, value_to_var, node)
+                print(tvm_var)
               else:
                 tvm_var = node.op.emit(bb, value_to_var, node)
               if tvm_var is not None:
