@@ -215,6 +215,8 @@ class Transpose(TensorOp):
         if axes is None:
             axes = list(range(len(A.shape)))
             axes[-1], axes[-2] = axes[-2], axes[-1]
+        print(A)
+        print(f"shape: {A.shape}")
         print(f"axes: {axes}")
         def te_transpose(A):
             print(topi.transpose(A, axes))
