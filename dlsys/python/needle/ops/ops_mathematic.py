@@ -210,18 +210,12 @@ class Transpose(TensorOp):
         """
         print(list(node_map.values()))
         A = node_map[node.inputs[0]]  # Input tensor
-        axes = self.axes
-
-        # Default axes if None (swap the last two dimensions)
-        if axes is None:
-            axes = list(range(len(A.shape)))
-            axes[-1], axes[-2] = axes[-2], axes[-1]
         print(A)
         print(f"shape: {A.shape}")
-        print(f"axes: {axes}")
+        print(f"axes: {self.axes}")
         def te_transpose(A):
-            print(topi.transpose(A, axes))
-            return topi.transpose(A, axes)
+            print(topi.transpose(A, self.axes))
+            return topi.transpose(A, self.axes)
 
         return bb.emit_te(te_transpose, A)
 
