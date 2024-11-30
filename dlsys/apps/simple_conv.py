@@ -16,6 +16,8 @@ from models import *
 from contextlib import contextmanager
 import time
 
+import torch
+
 # Timer
 @contextmanager
 def timer(model_name: str):
@@ -131,10 +133,26 @@ if __name__ == "__main__":
         device=config["device"],
     )
 
+    torch_model = torch.nn.Conv2d(
+        in_channels=config["in_channels"],
+        out_channels=config["out_channels"],
+        kernel_size=config["kernel_size"],
+        stride=config["stride"],
+        padding=config["padding"],
+        bias=False,
+    )
+    torch_model.eval()
+
     #########################################################
     # TVM Module
     #########################################################
+    weight = np.random.rand(config["out_channels"], config["in_channels"], config["kernel_size"], config["kernel_size"]).astype(np.float32)
+    torch_model.weight.data = torch.tensor(weight)
+
     x = np.random.rand(*input_shape).astype(np.float32)
+    torch_input = torch.tensor(x)
+    tvm_input = tvm.nd.array(x)
+
     module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
     print("=" * 5 + " Original module " + "=" * 5)
     module.show()
@@ -163,8 +181,13 @@ if __name__ == "__main__":
     # module.show()
 
     # Build and execute
-    # module_ex = relax.build(module, target=config["target"])
-    # module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+    module_ex = relax.build(module, target=config["target"])
+    module_vm = relax.VirtualMachine(module_ex, config["tvm_device"])
+
+    torch_output = torch_model(torch_input).detach().numpy()
+    tvm_output = module_vm["main"](tvm_input).asnumpy()
+
+    print(np.allclose(tvm_output, torch_output, atol=1e-4))
 
     # # Evaluate performance
     # evaluate_epoch_conv(model, module_vm, input_shape=input_shape, num_batches=config["num_batches"])
