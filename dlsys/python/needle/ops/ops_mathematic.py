@@ -209,15 +209,15 @@ class Transpose(TensorOp):
         Emit tensor expression for transpose operation.
         """
         A = node_map[node.inputs[0]]  # Input tensor
-        axes = self.axes
+        # axes = self.axes
 
-        # Default axes if None (swap the last two dimensions)
-        if axes is None:
-            axes = list(range(len(A.shape)))
-            axes[-1], axes[-2] = axes[-2], axes[-1]
+        # # Default axes if None (swap the last two dimensions)
+        # if axes is None:
+        #     axes = list(range(len(A.shape)))
+        #     axes[-1], axes[-2] = axes[-2], axes[-1]
 
         def te_transpose(A):
-            return topi.transpose(A, axes)
+            return topi.transpose(A, self.axes)
 
         return bb.emit_te(te_transpose, A)
 
