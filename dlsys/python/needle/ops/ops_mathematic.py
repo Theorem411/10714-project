@@ -210,6 +210,7 @@ class Transpose(TensorOp):
         """
         # print(f"node_map: {list(node_map.values())}")
         A = node_map[node.inputs[0]]  # Input tensor
+        print(f"type_A: {type(A)}")
         def te_transpose(A):
             # print(topi.transpose(A, self.axes))
             result = topi.transpose(A, self.axes)
@@ -223,15 +224,8 @@ class Transpose(TensorOp):
         Emit Relax operation for transpose.
         """
         A = node_map[node.inputs[0]]  # Input tensor
-        axes = self.axes
-
-        # Default axes if None (swap the last two dimensions)
-        if axes is None:
-            axes = list(range(len(A.shape)))
-            axes[-1], axes[-2] = axes[-2], axes[-1]
-
         # Use Relax's transpose operator
-        transpose_expr = relax.op.transpose(A, axes)
+        transpose_expr = relax.op.transpose(A, self.axes)
 
         # Emit the operation
         return bb.emit(transpose_expr)
