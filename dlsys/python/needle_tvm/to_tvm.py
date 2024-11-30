@@ -58,6 +58,7 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
 #   [print(f"leaf or op : {x.is_leaf() or x.op} is placeholder?: {x.placeholder} \n {x} \n{'-'*30}\n") for x in topo_order]
   with bb.function("main"):
       with bb.dataflow():
+          print(f"topo_order: {topo_order}")
           for i, node in enumerate(topo_order):
               # Leaf nodes (inputs or constants)
               print(node.op)
