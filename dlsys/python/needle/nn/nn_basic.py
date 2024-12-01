@@ -215,6 +215,8 @@ class BatchNorm1d(Module):
           
           self.running_var = ops.broadcast_to(self.running_var.reshape((1, self.running_var.shape[0])), x.shape)
           x_std = x_minus_u / ((self.running_var + self.eps)**0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(self.running_var, self.eps), 0.5))
+          
+          print(f"weight:{self.weight.shape}, x_std shape:{x_std.shape}, bias shape:{self.bias.shape}")
           res = self.weight * x_std + self.bias
 
           return res
