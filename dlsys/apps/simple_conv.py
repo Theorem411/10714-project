@@ -30,7 +30,7 @@ class ConvModel(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_dim=10, device=None):
         super().__init__()
         self.conv = nn.Conv(in_channels, out_channels, kernel_size, stride, padding, device=device)
-        # self.flatten = nn.Flatten()
+        self.flatten = nn.Flatten()
         # self.relu = nn.ReLU()
 
         # output_height = ((32 - kernel_size + 2 * padding) // stride) + 1
@@ -42,7 +42,7 @@ class ConvModel(nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
-        # x = self.flatten(x)
+        x = self.flatten(x)
         # x = self.relu(x)
         # # print(f"Shape after conv: {x.shape}")
         # x = self.fc(x)  # Map to 10-dimensional output
