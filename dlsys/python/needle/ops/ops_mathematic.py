@@ -92,6 +92,20 @@ class EWiseMul(TensorOp):
     def gradient(self, out_grad: Tensor, node: Tensor):
         lhs, rhs = node.inputs
         return out_grad * rhs, out_grad * lhs
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        """
+        Emit tensor expression for element-wise multiplication.
+        """
+        A = node_map[node.inputs[0]]  # First input tensor
+        B = node_map[node.inputs[1]]  # Second input tensor
+
+        # Define the TE function for element-wise multiplication
+        def te_ewise_mul(A, B):
+            return topi.multiply(A, B)
+
+        # Emit the TE operation
+        return bb.emit_te(te_ewise_mul, A, B)
 
 
 def multiply(a, b):
