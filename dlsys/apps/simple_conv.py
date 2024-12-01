@@ -62,6 +62,7 @@ def evaluate_batch_conv(model, module, X: np.ndarray):
     with timer("tvm"):
         tvm_out = module["main"](input_tvm)
     tvm_time = time.perf_counter() - start_time
+
     print(np.linalg.norm(tvm_out.asnumpy() - ndl_out.numpy()))
     assert np.allclose(tvm_out.asnumpy(), ndl_out.numpy(), atol=1e-4)
     return ndl_time, tvm_time
@@ -112,7 +113,7 @@ if __name__ == "__main__":
     # Performance Benchmarking
     #########################################################
     config = {
-        "batch_size": 8,
+        "batch_size": 1,
         "in_channels": 3,
         "out_channels": 16,
         "kernel_size": 3,
