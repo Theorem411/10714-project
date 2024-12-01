@@ -30,22 +30,22 @@ class ConvModel(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, output_dim=10, device=None):
         super().__init__()
         self.conv = nn.Conv(in_channels, out_channels, kernel_size, stride, padding, device=device)
-        self.flatten = nn.Flatten()
-        self.relu = nn.ReLU()
+        # self.flatten = nn.Flatten()
+        # self.relu = nn.ReLU()
 
-        output_height = ((32 - kernel_size + 2 * padding) // stride) + 1
-        output_width = ((32 - kernel_size + 2 * padding) // stride) + 1
-        flattened_dim = out_channels * output_height * output_width
+        # output_height = ((32 - kernel_size + 2 * padding) // stride) + 1
+        # output_width = ((32 - kernel_size + 2 * padding) // stride) + 1
+        # flattened_dim = out_channels * output_height * output_width
         # Fully connected layer to reduce to linear_output_dim
         # print(f"Flattened dim: {flattened_dim}, output_dim: {output_dim}")
-        self.fc = nn.Linear(flattened_dim, output_dim, device=device)
+        # self.fc = nn.Linear(flattened_dim, output_dim, device=device)
 
     def forward(self, x):
         x = self.conv(x)
-        x = self.flatten(x)
-        x = self.relu(x)
-        # print(f"Shape after conv: {x.shape}")
-        x = self.fc(x)  # Map to 10-dimensional output
+        # x = self.flatten(x)
+        # x = self.relu(x)
+        # # print(f"Shape after conv: {x.shape}")
+        # x = self.fc(x)  # Map to 10-dimensional output
         return x
 
 # Performance evaluation
@@ -139,15 +139,15 @@ if __name__ == "__main__":
     #########################################################
     # Needle model
     #########################################################
-    # model = ConvModel(
-    #     in_channels=config["in_channels"],
-    #     out_channels=config["out_channels"],
-    #     kernel_size=config["kernel_size"],
-    #     stride=config["stride"],
-    #     padding=config["padding"],
-    #     device=config["device"],
-    # )
-    model = ResNet9()
+    model = ConvModel(
+        in_channels=config["in_channels"],
+        out_channels=config["out_channels"],
+        kernel_size=config["kernel_size"],
+        stride=config["stride"],
+        padding=config["padding"],
+        device=config["device"],
+    )
+    # model = ResNet9()
 
     #########################################################
     # TVM Module
