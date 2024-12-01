@@ -178,50 +178,22 @@ class BatchNorm1d(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        B, N = x.shape
-        assert N == self.dim, "batchnorm input size does not match record"
-
-        def running_update(xold, x):
-          return (1 - self.momentum) * xold.data + self.momentum * x.data
-        
-        print(f"in BatchNorm1d: x.shape:{x.shape}")
-
+        batch_size, feature_size = x.shape
         if self.training:
+            mean = x.sum((0,)) / batch_size
+            mean_brocasted = mean.reshape((1, feature_size)).broadcast_to(x.shape)
+            var = ((x - mean_brocasted) ** 2).sum((0,)) / batch_size
+            var_brocasted = var.reshape((1, feature_size)).broadcast_to(x.shape)
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean.data
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * var.data
 
-          # training: batch norm over features
-          x_mean = ops.summation(x, axes=0) / B
-          self.running_mean = running_update(self.running_mean, x_mean)
-          x_mean = ops.broadcast_to(ops.reshape(x_mean, (1, N)), x.shape)
+        else:
+            mean_brocasted = self.running_mean.detach().reshape((1, feature_size)).broadcast_to(x.shape)
+            var_brocasted = self.running_var.detach().reshape((1, feature_size)).broadcast_to(x.shape)
 
-          x_minus_u = x - x_mean # ops.add(x, ops.negate(x_mean))
-          x_var = ops.summation(x_minus_u ** 2, axes=0) / B # ops.divide_scalar(ops.summation(x_minus_u_2, axes=0), B)
-          self.running_var = running_update(self.running_var, x_var)
-          x_var = ops.broadcast_to(ops.reshape(x_var, (1, N)), x.shape)
-          
-          # # broadcast self.weight and self.bias
-          print(f"weight:{self.weight.shape}, to shape:{x.shape}")
-          w_broad = ops.broadcast_to(self.weight.reshape((1,self.weight.shape[0])), x.shape)
-          b_broad = ops.broadcast_to(self.bias.reshape((1, self.bias.shape[0])), x.shape)
-
-          # compute final result
-          x_std = x_minus_u / ((x_var + self.eps) ** 0.5)# ops.power_scalar(ops.add_scalar(x_var, self.eps), 0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(x_var, self.eps), 0.5))
-          res = w_broad * x_std + b_broad # ops.add(ops.multiply(w_broad, x_std), b_broad)
-
-          # print(f"BatchNorm 0 res.dtype: {res.dtype}")
-          return res
-        else: 
-          print(f"x shape: {x.shape}, running_mean shape: {self.running_mean.shape}, running_var shape: {self.running_var.shape}")
-          x_minus_u = x - ops.broadcast_to(self.running_mean.reshape((1, self.running_mean.shape[0])) , x.shape)# ops.add(x, ops.negate(self.running_mean))
-          
-          self.running_var = ops.broadcast_to(self.running_var.reshape((1, self.running_var.shape[0])), x.shape)
-          x_std = x_minus_u / ((self.running_var + self.eps)**0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(self.running_var, self.eps), 0.5))
-          
-          print(f"weight:{self.weight.shape}, x_std shape:{x_std.shape}, bias shape:{self.bias.shape}")
-          self.weight = ops.broadcast_to(self.weight.reshape((1, self.weight.shape[0])), x.shape)
-          self.bias = ops.broadcast_to(self.bias.reshape((1, self.bias.shape[0])), x.shape)
-          res = self.weight * x_std + self.bias
-
-          return res
+        norm = (x - mean_brocasted) / ((var_brocasted + self.eps) ** 0.5)
+        return self.weight.reshape((1, feature_size)).broadcast_to(x.shape) * norm + \
+            self.bias.reshape((1, feature_size)).broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 
