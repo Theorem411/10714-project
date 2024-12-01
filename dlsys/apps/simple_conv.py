@@ -58,10 +58,10 @@ def evaluate_batch_conv(model, module, X: np.ndarray):
         ndl_out = model(input_ndl)
     ndl_time = time.perf_counter() - start_time
 
-    start_time = time.perf_counter()
-    with timer("tvm"):
-        tvm_out = module["main"](input_tvm)
-    tvm_time = time.perf_counter() - start_time
+    # start_time = time.perf_counter()
+    # with timer("tvm"):
+    #     tvm_out = module["main"](input_tvm)
+    # tvm_time = time.perf_counter() - start_time
 
     print(f"tvm_out shape: {tvm_out.shape}, ndl_out shape: {ndl_out.shape}")
     print(np.linalg.norm(tvm_out.asnumpy() - ndl_out.numpy()))
