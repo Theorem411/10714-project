@@ -60,7 +60,7 @@ class ResNet9(ndl.nn.Module):
 ################################################################################
 # Performance eval wrapper class
 ################################################################################
-class ConvEval(ModeEval):
+class ConvEval(ModelEval):
   def __init__(self, input_dim, num_batches, batch_size,
                device="cpu", recompile=False):
 
