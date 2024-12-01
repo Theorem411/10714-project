@@ -151,7 +151,6 @@ class SoftmaxLoss(Module):
         return res
         ### END YOUR SOLUTION
 
-
 class BatchNorm1d(Module):
     def __init__(self, dim, eps=1e-5, momentum=0.1, device=None, dtype="float32"):
         super().__init__()
@@ -159,34 +158,63 @@ class BatchNorm1d(Module):
         self.eps = eps
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
+        self.dtype = dtype
+        self.device = device
 
-        self.running_mean = init.zeros(dim, requires_grad=False, device=device, dtype=dtype)
-        self.running_var = init.ones(dim, requires_grad=False, device=device, dtype=dtype)
+        self.weight = init.ones(dim, dtype=dtype, device=device)
+        self.weight = Parameter(self.weight)
+        self.bias = init.zeros(dim, dtype=dtype, device=device)
+        self.bias = Parameter(self.bias)
 
-        self.weight = Parameter(init.ones(dim, requires_grad=True, device=device, dtype=dtype))
-        self.bias = Parameter(init.zeros(dim, requires_grad=True, device=device, dtype=dtype))
+        self.running_mean = init.zeros(dim, dtype=dtype, device=device)
+        self.running_var = init.ones(dim, dtype=dtype, device=device)
+
+
+        # debug num params: 
+        # print(f"nn.BatchNorm1d: self.weight = {self.weight.shape} --> {np.prod(np.array(self.weight.shape))}")
+        # print(f"nn.BatchNorm1d: self.bias = {self.bias.shape} --> {np.prod(np.array(self.bias.shape))}")
+
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        batch_size, feature_size = x.shape
+        B, N = x.shape
+        assert N == self.dim, "batchnorm input size does not match record"
+
+        def running_update(xold, x):
+          return (1 - self.momentum) * xold.data + self.momentum * x.data
+
         if self.training:
-            mean = x.sum((0,)) / batch_size
-            mean_brocasted = mean.reshape((1, feature_size)).broadcast_to(x.shape)
-            var = ((x - mean_brocasted) ** 2).sum((0,)) / batch_size
-            var_brocasted = var.reshape((1, feature_size)).broadcast_to(x.shape)
-            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean.data
-            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * var.data
 
-        else:
-            mean_brocasted = self.running_mean.detach().reshape((1, feature_size)).broadcast_to(x.shape)
-            var_brocasted = self.running_var.detach().reshape((1, feature_size)).broadcast_to(x.shape)
+          # training: batch norm over features
+          x_mean = ops.summation(x, axes=0) / B
+          self.running_mean = running_update(self.running_mean, x_mean)
+          x_mean = ops.broadcast_to(ops.reshape(x_mean, (1, N)), x.shape)
 
-        norm = (x - mean_brocasted) / ((var_brocasted + self.eps) ** 0.5)
-        return self.weight.reshape((1, feature_size)).broadcast_to(x.shape) * norm + \
-            self.bias.reshape((1, feature_size)).broadcast_to(x.shape)
+          x_minus_u = x - x_mean # ops.add(x, ops.negate(x_mean))
+          x_var = ops.summation(x_minus_u ** 2, axes=0) / B # ops.divide_scalar(ops.summation(x_minus_u_2, axes=0), B)
+          self.running_var = running_update(self.running_var, x_var)
+          x_var = ops.broadcast_to(ops.reshape(x_var, (1, N)), x.shape)
+          
+          # # broadcast self.weight and self.bias
+          w_broad = ops.broadcast_to(self.weight, x.shape)
+          b_broad = ops.broadcast_to(self.bias, x.shape)
+
+          # compute final result
+          x_std = x_minus_u / ((x_var + self.eps) ** 0.5)# ops.power_scalar(ops.add_scalar(x_var, self.eps), 0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(x_var, self.eps), 0.5))
+          res = w_broad * x_std + b_broad # ops.add(ops.multiply(w_broad, x_std), b_broad)
+
+          # print(f"BatchNorm 0 res.dtype: {res.dtype}")
+          return res
+        else: 
+        
+          x_minus_u = x - self.running_mean # ops.add(x, ops.negate(self.running_mean))
+
+          x_std = x_minus_u / ((self.running_var + self.eps)**0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(self.running_var, self.eps), 0.5))
+          res = self.weight * x_std + self.bias
+
+          return res
         ### END YOUR SOLUTION
-
 
 
 class LayerNorm1d(Module):
