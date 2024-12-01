@@ -738,7 +738,7 @@ class Conv(TensorOp):
         
         # Define the TE function
         def te_conv(A, B):
-            return topi.nn.conv2d(A, B, strides=stride, padding=padding, dilation=dilation, layout='NHWC')
+            return topi.nn.conv2d_nhwc(A, B, strides=stride, padding=padding, dilation=dilation)
 
         # Emit the TE operation
         return bb.emit_te(te_conv, A, B)
