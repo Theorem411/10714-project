@@ -199,7 +199,8 @@ class BatchNorm1d(Module):
           x_var = ops.broadcast_to(ops.reshape(x_var, (1, N)), x.shape)
           
           # # broadcast self.weight and self.bias
-          w_broad = ops.broadcast_to(self.weight, x.shape)
+          print(f"weight:{self.weight.shape}, to shape:{x.shape}")
+          w_broad = ops.broadcast_to(self.weight.reshape((1,self.weight.shape[0])), x.shape)
           b_broad = ops.broadcast_to(self.bias, x.shape)
 
           # compute final result
