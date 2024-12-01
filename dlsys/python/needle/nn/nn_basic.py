@@ -208,9 +208,7 @@ class LayerNorm1d(Module):
         Var_x = Var_x.reshape((Var_x.shape[0], 1))
      
         norm_term = ((x - E_x.broadcast_to(x.shape)) / (Var_x + self.eps).__pow__(0.5).broadcast_to(x.shape))
-        # print(f'norm term : {norm_term.shape}')
         y = self.w.reshape((1, self.dim)).broadcast_to(norm_term.shape) * norm_term + self.b.reshape((1, self.dim)).broadcast_to(norm_term.shape)
-        # print(f'y : {y.shape}')
         return y
         ### END YOUR SOLUTION
 
