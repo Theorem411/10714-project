@@ -50,8 +50,8 @@ if __name__ == "__main__":
     #########################################################
     # MLP Experiment
     #########################################################
-    mlp = MLPEval(config["input_dim"], config["num_batches"], config["batch_size"], config["n_layers"], recompile=args.recompile)
-    mlp.eval()
+    # mlp = MLPEval(config["input_dim"], config["num_batches"], config["batch_size"], config["n_layers"], recompile=args.recompile)
+    # mlp.eval()
 
     #########################################################
     # Convolution Experiment
@@ -60,5 +60,9 @@ if __name__ == "__main__":
     #########################################################
     # Transformer Experiment
     #########################################################
-    # trans = TransformerEval(config["input_dim"], config["num_batches"], config["batch_size"], config["seq_len"], recompile=args.recompile)
-    # trans.eval()
+    trans = TransformerEval(
+      config["input_dim"], config["num_batches"], config["batch_size"], 
+      config["input_dim"], config["seq_len"],
+      recompile=args.recompile
+    )
+    trans.eval()

@@ -32,8 +32,8 @@ class MLPEval(ModelEval):
   def __init__(self, input_dim, num_batches, batch_size, n_layers,
                device="cpu", recompile=False):
 
-    super().__init__(input_dim, num_batches, batch_size, device, recompile)
     self.n_layers = n_layers
+    super().__init__(input_dim, num_batches, batch_size, device, recompile)
   
   def module_lib_save_name(self):
     return f"mlp-{self.ndl_device.name}.so"

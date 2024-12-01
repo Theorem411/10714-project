@@ -15,6 +15,7 @@ from .nn_basic import (
     Sequential
 )
 
+np.random.seed(3)
 
 class MultiHeadAttention(Module):
     """
@@ -338,4 +339,4 @@ class Transformer(Module):
         if not self.batch_first:
             x = ops.transpose(x, axes=(0, 1))
 
-        return x, init.zeros_like(x)
+        return x #, init.zeros_like(x)

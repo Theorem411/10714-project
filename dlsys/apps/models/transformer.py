@@ -18,7 +18,6 @@ class TransformerEval(ModelEval):
                hidden_dim, seq_len, 
                n_layers=2, num_head=8, dim_head=32, dropout=0.0, causal=False, 
                device="cpu", recompile=False):
-
     super().__init__(input_dim, num_batches, batch_size, device, recompile)
     self.hidden_dim = hidden_dim
     self.seq_len = seq_len
@@ -28,9 +27,9 @@ class TransformerEval(ModelEval):
     self.dropout = dropout
     self.causal = causal
 
-  def construct_model():
+  def construct_model(self):
     return nn.Transformer(
-        self.input_dim, self.hidden_size, self.num_layers,
+        self.input_dim, self.hidden_dim, self.n_layers,
         num_head=self.num_head,
         dim_head=self.dim_head,
         dropout=self.dropout,

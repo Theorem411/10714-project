@@ -9,6 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'p
 
 import needle as ndl
 import needle.nn as nn
+from needle_tvm import to_tvm_tensor
 
 import time
 from tqdm.auto import tqdm
@@ -17,13 +18,13 @@ class ModelEval:
   model: nn.Module
   module: tvm.IRModule
 
-  ndl_device: ndl.ndarray.BackendDevice
-  tvm_device: tvm.device
-  tvm_target: tvm.Target
+  # ndl_device: ndl.ndarray.BackendDevice
+  # tvm_device: tvm.device
+  # tvm_target: tvm.Target
 
-  input_dim: int
-  num_batches: int
-  batch_size: int
+  # input_dim: int
+  # num_batches: int
+  # batch_size: int
 
   def __init__(self, input_dim, num_batches, batch_size, 
                device="cpu", recompile=False): 
@@ -39,39 +40,27 @@ class ModelEval:
     if device == "cpu":
       self.ndl_device = ndl.cpu()
       self.tvm_device = tvm.cpu()
-      self.tvm_target = tvm.target.Target("llvm")
+      self.tvm_target = "llvm"
     elif device == "cuda":
       self.ndl_device = ndl.cuda()
       self.tvm_device = tvm.cuda()
-      self.tvm_target = tvm.target.Target("llvm")
+      self.tvm_target = "cuda"
     else: 
       raise NotImplementedError
-
-    # construct model
-    self.model = self.construct_model()
-
-    # translate model to tvm irmodule and save as shared library
-    self.module_path = self.module_save_path()
     
-    try: 
-      if not recompile:
-        module_ex = tvm.runtime.load_module(self.module_path)
-        self.module = relax.VirtualMachine(module_ex, self.tvm_device)
-        print(f"module reloaded from {self.module_path}")
-      else:
-        self.module = compile_model()
-        print(f"module recompiled")
-    except FileNotFoundError: 
-      self.module = compile_model()
-      print(f"module compiled")
+    #
+    self.recompile = recompile
+    self.model = None
+    self.module = None
+    self.module_path = None
 
-  @property
-  def model():
-    return model
+  # @property
+  # def model():
+  #   return model
 
-  @property
-  def module():
-    return module
+  # @property
+  # def module():
+  #   return module
 
   # must be overriden by children class
   def construct_model(self): 
@@ -92,8 +81,9 @@ class ModelEval:
 
   ### compile TVM irmodule functionality #####################################
   def compile_model(self):
+    x = self.dummy_input()
     # generate new tvm IRModule using Tensor graph
-    ir_module = to_tvm_tensor(model, True, ndl.Tensor(x, device=self.ndl_device))
+    ir_module = to_tvm_tensor(self.model, True, ndl.Tensor(x, device=self.ndl_device))
     print('='*5 + " original module" + '='*5)
     ir_module.show()
     
@@ -105,7 +95,7 @@ class ModelEval:
     # meta-scheduling
     with transform.PassContext(opt_level=4):
       print('='*5 + " Apply meta_schedule..." + '='*5)
-      self.tune_tir_all(ir_module)
+      self.tune_tir_all(ir_module, max_trials=5, num_trials_per_iter=5)
       print('='*5 + " auto-tuned module " + '='*5)
       ir_module.show()
     
@@ -114,14 +104,15 @@ class ModelEval:
     module_ex.export_library(self.module_path)
     print(f"module exported to {self.module_path}")
 
-    self.module = relax.VirtualMachine(module_ex, self.tvm_device)
-    
+    module = relax.VirtualMachine(module_ex, self.tvm_device)
+    return module
+
   # children class should override this function to provide model-specific optimizations
   def opt_irmodule(self, ir_module: tvm.IRModule):
     pipeline = self._default_pipeline()
     return pipeline(ir_module)
 
-  def _default_pipeline():
+  def _default_pipeline(self):
     return tvm.ir.transform.Sequential([
       tvm.relax.transform.LegalizeOps(),
       tvm.relax.transform.AnnotateTIROpPattern(),
@@ -133,8 +124,8 @@ class ModelEval:
   ### metaschedule tuning                  #####################################
   def tune_tir_all(self, ir_module, max_trials=64, num_trials_per_iter=64, work_dir="./tune_tmp", max_funcs=None):
     # add number of cores
-    target = self.target.with_attr("num-cores", self.cores)
-    print(f"{__func__}: target={target}")
+    target = self.tvm_target + f" -num-cores={self.cores}"
+    print(f"tune_tir_all: target={target}")
     
     # Iterate over all functions in the IRModule
     funcs = 0
@@ -199,10 +190,28 @@ class ModelEval:
     return ndl_time, tvm_time
 
   def eval(self):
+    # construct model
+    self.model = self.construct_model()
+
+    # translate model to tvm irmodule and save as shared library
+    self.module_path = self.module_save_path()
+    
+    try: 
+      if not self.recompile:
+        module_ex = tvm.runtime.load_module(self.module_path)
+        self.module = relax.VirtualMachine(module_ex, self.tvm_device)
+        print(f"module reloaded from {self.module_path}")
+      else:
+        self.module = self.compile_model()
+        print(f"module recompiled")
+    except ValueError: 
+      self.module = self.compile_model()
+      print(f"module compiled")
+
     # !NECESSARY: fix all rand seed to pass correctness after module reload
     np.random.seed(4)
 
-    model.eval()
+    self.model.eval()
 
     # init timing code
     ndl_time = 0
