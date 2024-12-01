@@ -169,31 +169,22 @@ class BatchNorm1d(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        # x: B x W
+        batch_size, feature_size = x.shape
         if self.training:
-            E_x = x.sum(axes=0) / x.shape[0] 
-            # E_x: (W,)
-            Var_x =  ((x - E_x.reshape((1, x.shape[1])).broadcast_to(x.shape)) ** 2).sum(axes=0) / x.shape[0]
-            # Var_x: (W,)
+            mean = x.sum((0,)) / batch_size
+            mean_brocasted = mean.reshape((1, feature_size)).broadcast_to(x.shape)
+            var = ((x - mean_brocasted) ** 2).sum((0,)) / batch_size
+            var_brocasted = var.reshape((1, feature_size)).broadcast_to(x.shape)
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean.data
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * var.data
 
-            self.running_mean = ((1-self.momentum)*self.running_mean + (self.momentum * E_x)).detach()
-            self.running_var = ((1-self.momentum)*self.running_var + (self.momentum * Var_x)).detach()
-
-            E_x = E_x.reshape((1, E_x.shape[0]))
-            # E_x: (1, W)
-            Var_x = Var_x.reshape((1, Var_x.shape[0]))
-            # Var_x: (1, W)
-            
-        
         else:
-            E_x = self.running_mean
-            Var_x = self.running_var
-     
-        norm_term = ((x - E_x.broadcast_to(x.shape)) / (Var_x + self.eps).__pow__(0.5).broadcast_to(x.shape))
-        y = self.weight.reshape((1, self.dim)).broadcast_to(norm_term.shape) * norm_term + self.bias.reshape((1, self.dim)).broadcast_to(norm_term.shape)
-        
-        return y
+            mean_brocasted = self.running_mean.detach().reshape((1, feature_size)).broadcast_to(x.shape)
+            var_brocasted = self.running_var.detach().reshape((1, feature_size)).broadcast_to(x.shape)
 
+        norm = (x - mean_brocasted) / ((var_brocasted + self.eps) ** 0.5)
+        return self.weight.reshape((1, feature_size)).broadcast_to(x.shape) * norm + \
+            self.bias.reshape((1, feature_size)).broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 
