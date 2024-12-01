@@ -306,6 +306,7 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
+        print(self.shape, new_shape)
         if any([self.shape[i] != new_shape[i] and self.shape[i] != 1 for i in range(len(new_shape))]):
             raise AssertionError(f"Shapes don't match in broadcast_to with\n old shape: {self.shape} \tnew shape: {new_shape}")
 
