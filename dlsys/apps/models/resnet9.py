@@ -61,11 +61,16 @@ class ResNet9(ndl.nn.Module):
 # Performance eval wrapper class
 ################################################################################
 class ConvEval(ModelEval):
-  def __init__(self, input_dim, num_batches, batch_size,
+  def __init__(self, input_dim, num_batches, batch_size, 
+               in_channels, out_channels, 
                device="cpu", recompile=False):
 
     # input_dim, num_batches, batch_size not used
     super().__init__(input_dim, num_batches, batch_size, device, recompile)
+    self.in_channels = in_channels
+    self.out_channels = out_channels
+    self.input_height = input_height
+    self.input_width = input_width
   
   def module_lib_save_name(self):
     return f"conv-{self.ndl_device.name}.so"
@@ -76,4 +81,4 @@ class ConvEval(ModelEval):
 
   # overrides default
   def dummy_input(self):
-    return np.random.rand(self.batch_size, self.input_dim).astype(np.float32)
+    return np.random.rand(self.batch_size, self.in_channels, self.input_height, self.input_width).astype(np.float32)
