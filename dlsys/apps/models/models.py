@@ -41,7 +41,7 @@ class ResNet9(ndl.nn.Module):
             nn.Flatten(),
             nn.Linear(128, 128, device=device, dtype=dtype),
             nn.ReLU(),
-            nn.Linear(128, 10, device=device, dtype=dtype),
+            nn.Linear(128, 10, device=device, dtype=dtype), 
         )
         ### END YOUR SOLUTION
 
