@@ -136,7 +136,7 @@ class Sequential(Module):
         ### BEGIN YOUR SOLUTION
         for mod in self.modules:
             x = mod.forward(x)
-        return x
+        return x 
         ### END YOUR SOLUTION
 
 
