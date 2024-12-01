@@ -735,12 +735,10 @@ class Conv(TensorOp):
         padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
         dilation = (1, 1)  # Default dilation
 
-        A_nchw = bb.emit_te(lambda A: topi.transpose(A, axes=(0, 3, 1, 2)), A)
-
         
         # Define the TE function
         def te_conv(A, B):
-            return topi.nn.conv2d(A_nchw, B, strides=stride, padding=padding, dilation=dilation)
+            return topi.nn.conv2d(A, B, strides=stride, padding=padding, dilation=dilation, layout='NHWC')
 
         # Emit the TE operation
         return bb.emit_te(te_conv, A, B)
