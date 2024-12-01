@@ -60,7 +60,6 @@ def to_tvm_tensor(mod: Module, te: bool, *args, **kwargs):
       with bb.dataflow():
           for i, node in enumerate(topo_order):
               # Leaf nodes (inputs or constants)
-              print(node.op)
               if node.is_leaf():
                   if node.placeholder:
                       tvm_var = (relax.Var("X", relax.TensorStructInfo(node.shape, "float32")))
