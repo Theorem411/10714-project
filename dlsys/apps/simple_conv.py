@@ -164,19 +164,19 @@ if __name__ == "__main__":
     print("=" * 5 + " Original module " + "=" * 5)
     module.show()
 
-    # # Optimize module
-    # module = tvm.relax.transform.LegalizeOps()(module)
-    # module = tvm.ir.transform.Sequential(
-    #     [
-    #         tvm.relax.transform.AnnotateTIROpPattern(),
-    #         tvm.relax.transform.FuseOps(),
-    #         tvm.relax.transform.FuseTIR(),
-    #     ]
-    # )(module)
-    # print("=" * 5 + " Transformed module " + "=" * 5)
-    # module.show()
+    # Optimize module
+    module = tvm.relax.transform.LegalizeOps()(module)
+    module = tvm.ir.transform.Sequential(
+        [
+            tvm.relax.transform.AnnotateTIROpPattern(),
+            tvm.relax.transform.FuseOps(),
+            tvm.relax.transform.FuseTIR(),
+        ]
+    )(module)
+    print("=" * 5 + " Transformed module " + "=" * 5)
+    module.show()
 
-    # Tune TIR
+    # # Tune TIR
     # tune_tir(
     #     module,
     #     "fused_te_conv2d_te_relu",  # Adjust function name if needed
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     #     num_trials_per_iter=5,
     # )
     # print("=" * 5 + " Auto-tuned module " + "=" * 5)
-    # module.show()
+    # # module.show()
 
     # Build and execute
     module_ex = relax.build(module, target=config["target"])
