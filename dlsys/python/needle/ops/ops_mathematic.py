@@ -65,17 +65,12 @@ class AddScalar(TensorOp):
         return out_grad
     
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for adding a scalar to a tensor.
-        """
         A = node_map[node.inputs[0]]  # Input tensor
-        scalar = self.scalar  # Scalar to add
+        scalar = tvm.tir.const(self.scalar, dtype="float32")
 
-        # Define the TE function for scalar addition
         def te_add_scalar(A):
-            return topi.add(A, tvm.tir.const(scalar, dtype=A.dtype))
+            return topi.add(A, scalar)
 
-        # Emit the TE operation
         return bb.emit_te(te_add_scalar, A)
 
 
@@ -92,17 +87,12 @@ class EWiseMul(TensorOp):
         return out_grad * rhs, out_grad * lhs
     
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for element-wise multiplication.
-        """
-        A = node_map[node.inputs[0]]  # First input tensor
-        B = node_map[node.inputs[1]]  # Second input tensor
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
 
-        # Define the TE function for element-wise multiplication
         def te_ewise_mul(A, B):
             return topi.multiply(A, B)
 
-        # Emit the TE operation
         return bb.emit_te(te_ewise_mul, A, B)
 
 
@@ -119,6 +109,15 @@ class MulScalar(TensorOp):
 
     def gradient(self, out_grad: Tensor, node: Tensor):
         return (out_grad * self.scalar,)
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = self.scalar
+
+        def te_mul_scalar(A):
+            return topi.multiply(A, scalar)
+
+        return bb.emit_te(te_mul_scalar, A)
 
 
 def mul_scalar(a, scalar):
@@ -140,6 +139,15 @@ class EWisePow(TensorOp):
         dy = power(x, y) * log(x)
         return (out_grad*dx, out_grad*dy)
         ### END YOUR SOLUTION
+
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
+
+        def te_ewise_pow(A, B):
+            return topi.power(A, B)
+
+        return bb.emit_te(te_ewise_pow, A, B)
 
 
 def power(a, b):
@@ -164,17 +172,12 @@ class PowerScalar(TensorOp):
         ### END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for raising a tensor to a scalar power.
-        """
         A = node_map[node.inputs[0]]  # Input tensor
-        scalar = self.scalar  # Scalar exponent
+        scalar = self.scalar
 
-        # Define the TE function for power operation
         def te_power_scalar(A):
-            return topi.power(A, tvm.tir.const(scalar, dtype=A.dtype))
+            return topi.power(A, scalar)
 
-        # Emit the TE operation
         return bb.emit_te(te_power_scalar, A)
 
 def power_scalar(a, scalar):
@@ -199,17 +202,12 @@ class EWiseDiv(TensorOp):
         ### END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for element-wise division.
-        """
-        A = node_map[node.inputs[0]]  # First input tensor
-        B = node_map[node.inputs[1]]  # Second input tensor
+        A = node_map[node.inputs[0]]
+        B = node_map[node.inputs[1]]
 
-        # Define the TE function for element-wise division
         def te_ewise_div(A, B):
             return topi.divide(A, B)
 
-        # Emit the TE operation
         return bb.emit_te(te_ewise_div, A, B)
 
 
@@ -232,17 +230,12 @@ class DivScalar(TensorOp):
         ### END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for the division by scalar operation.
-        """
         A = node_map[node.inputs[0]]  # Input tensor
-        scalar = self.scalar  # Scalar value for division
+        scalar = self.scalar
 
-        # Define the TE function for scalar division
         def te_div_scalar(A):
-            return topi.divide(A, tvm.tir.const(scalar, dtype=A.dtype))
+            return topi.divide(A, scalar)
 
-        # Emit the TE operation
         return bb.emit_te(te_div_scalar, A)
 
 
@@ -416,19 +409,20 @@ class Summation(TensorOp):
         ## END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-
         A = node_map[node.inputs[0]]  # Input tensor
-
-        # Determine axes
         axes = self.axes
+
+        # Determine axes for summation
         if axes is None:
+            # Sum over all axes
             axes = list(range(len(A.shape)))
+        elif isinstance(axes, int):
+            # Single axis
+            axes = [axes]
 
-        # Define the TE function for summation
         def te_sum(A):
-            return topi.sum(A, axis=axes, keepdims=False)
+            return topi.sum(A, axis=axes)
 
-        # Emit the TE operation
         return bb.emit_te(te_sum, A)
 
 def summation(a, axes=None):
