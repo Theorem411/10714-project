@@ -818,7 +818,6 @@ class Conv(TensorOp):
         """
         Emit tensor expression for the conv2d operation.
         """
-        print(f"conv2d: {node.inputs[0].shape} {node.inputs[1].shape}")
         A = node_map[node.inputs[0]]  # Input tensor
         B = node_map[node.inputs[1]]  # Filter tensor
 
@@ -827,7 +826,6 @@ class Conv(TensorOp):
         padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
         dilation = (1, 1)  # Default dilation
 
-        
         # Define the TE function
         def te_conv(A, B):
             return topi.nn.conv2d_nhwc(A, B, stride=stride, padding=padding, dilation=dilation)
