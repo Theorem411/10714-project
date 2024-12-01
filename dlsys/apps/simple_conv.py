@@ -50,7 +50,6 @@ class ConvModel(nn.Module):
 
 # Performance evaluation
 def evaluate_batch_conv(model, module, X: np.ndarray):
-    print(X.shape)
     input_ndl = ndl.Tensor(X, device=ndl.cpu(), requires_grad=False, placeholder=True)
     input_tvm = tvm.nd.array(X)
 
@@ -63,7 +62,7 @@ def evaluate_batch_conv(model, module, X: np.ndarray):
     with timer("tvm"):
         tvm_out = module["main"](input_tvm)
     tvm_time = time.perf_counter() - start_time
-
+    print(f"NDL output: {ndl_out.shape}\tTVM output: {tvm_out.shape}")
     assert np.allclose(tvm_out.asnumpy(), ndl_out.numpy(), atol=1e-4)
     return ndl_time, tvm_time
 
