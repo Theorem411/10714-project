@@ -50,9 +50,7 @@ class Conv(Module):
         res = self.convertToChannelFirst(res)
 
         if self.bias is not None:
-            tmp = ops.broadcast_to(self.bias.reshape((1, self.out_channels, 1, 1)), res.shape)
-            print(f'bias shape: {tmp.shape}, res shape: {res.shape}')
-            res += tmp
+            res += ops.broadcast_to(self.bias.reshape((1, self.out_channels, 1, 1)), res.shape)
 
         
         return res
