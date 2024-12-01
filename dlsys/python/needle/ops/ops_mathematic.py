@@ -178,6 +178,20 @@ class DivScalar(TensorOp):
         return (out_grad / self.scalar,)
         ### END YOUR SOLUTION
 
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        """
+        Emit tensor expression for the division by scalar operation.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = self.scalar  # Scalar value for division
+
+        # Define the TE function for scalar division
+        def te_div_scalar(A):
+            return topi.divide(A, tvm.tir.const(scalar, dtype=A.dtype))
+
+        # Emit the TE operation
+        return bb.emit_te(te_div_scalar, A)
+
 
 def divide_scalar(a, scalar):
     return DivScalar(scalar)(a)
@@ -349,9 +363,7 @@ class Summation(TensorOp):
         ## END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for the summation operation.
-        """
+
         A = node_map[node.inputs[0]]  # Input tensor
 
         # Determine axes
