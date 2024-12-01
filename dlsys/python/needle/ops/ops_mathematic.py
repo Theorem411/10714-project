@@ -737,11 +737,10 @@ class Conv(TensorOp):
 
         A_nchw = bb.emit_te(lambda A: topi.transpose(A, axes=(0, 3, 1, 2)), A)
 
-        # Emit transpose for HWIO -> OIHW
-        B_oihw = bb.emit_te(lambda B: topi.transpose(B, axes=(3, 2, 0, 1)), B)
+        
         # Define the TE function
         def te_conv(A, B):
-            return topi.nn.conv2d(A_nchw, B_oihw, strides=stride, padding=padding, dilation=dilation)
+            return topi.nn.conv2d(A_nchw, B, strides=stride, padding=padding, dilation=dilation)
 
         # Emit the TE operation
         return bb.emit_te(te_conv, A, B)
