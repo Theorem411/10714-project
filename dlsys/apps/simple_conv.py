@@ -50,7 +50,7 @@ class ConvModel(nn.Module):
 
 # Performance evaluation
 def evaluate_batch_conv(model, module, X: np.ndarray):
-    input_ndl = ndl.Tensor(X, device=ndl.cpu(), requires_grad=False, placeholder=True)
+    input_ndl = ndl.Tensor(nn.transpose(X, (0,2,3,1)), device=ndl.cpu(), requires_grad=False, placeholder=True)
     input_tvm = tvm.nd.array(X)
 
     start_time = time.perf_counter()
