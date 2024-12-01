@@ -62,7 +62,7 @@ def evaluate_batch_conv(model, module, X: np.ndarray):
     with timer("tvm"):
         tvm_out = module["main"](input_tvm)
     tvm_time = time.perf_counter() - start_time
-    print(f"NDL output: {ndl_out.shape}\tTVM output: {tvm_out.shape}")
+    print(f"NDL output: {ndl_out}\tTVM output: {tvm_out}")
     assert np.allclose(tvm_out.asnumpy(), ndl_out.numpy(), atol=1e-4)
     return ndl_time, tvm_time
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     weight = np.random.rand(config["out_channels"], config["in_channels"], config["kernel_size"], config["kernel_size"]).astype(np.float32)
 
     x = np.random.rand(*input_shape).astype(np.float32)
-    print(f"Input shape: {x.shape}")
+    # print(f"Input shape: {x.shape}")
     tvm_input = tvm.nd.array(x)
 
     module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
