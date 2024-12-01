@@ -31,8 +31,6 @@ class EWiseAdd(TensorOp):
         return out_grad, out_grad
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        print(node.inputs[0].shape, node.inputs[1].shape)
-        print(node.inputs[0].dtype, node.inputs[1].dtype)
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
         
