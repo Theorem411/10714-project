@@ -349,7 +349,22 @@ class Summation(TensorOp):
         ## END YOUR SOLUTION
 
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-      raise NotImplementedError
+        """
+        Emit tensor expression for the summation operation.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor
+
+        # Determine axes
+        axes = self.axes
+        if axes is None:
+            axes = list(range(len(A.shape)))
+
+        # Define the TE function for summation
+        def te_sum(A):
+            return topi.sum(A, axis=axes, keepdims=False)
+
+        # Emit the TE operation
+        return bb.emit_te(te_sum, A)
 
 def summation(a, axes=None):
     return Summation(axes)(a)
