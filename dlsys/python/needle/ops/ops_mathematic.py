@@ -496,16 +496,11 @@ class Negate(TensorOp):
         ### END YOUR SOLUTION
       
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for the negation operation.
-        """
         A = node_map[node.inputs[0]]  # Input tensor
 
-        # Define the TE function for negation
         def te_negate(A):
-            return topi.multiply(A, tvm.tir.const(-1, dtype=A.dtype))
+            return topi.multiply(A, -1)  # Negate by multiplying with -1
 
-        # Emit the TE operation
         return bb.emit_te(te_negate, A)
 
 
