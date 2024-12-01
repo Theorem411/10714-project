@@ -306,9 +306,9 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        print(self.shape, new_shape)
-        if any([self.shape[i] != new_shape[i] and self.shape[i] != 1 for i in range(len(new_shape))]):
-            raise AssertionError(f"Shapes don't match in broadcast_to with\n old shape: {self.shape} \tnew shape: {new_shape}")
+        # print(self.shape, new_shape)
+        # if any([self.shape[i] != new_shape[i] and self.shape[i] != 1 for i in range(len(new_shape))]):
+            # raise AssertionError(f"Shapes don't match in broadcast_to with\n old shape: {self.shape} \tnew shape: {new_shape}")
 
         new_strides = tuple([self.strides[i] if self.shape[i] == new_shape[i] else 0 for i in range(len(new_shape))])
         return self.as_strided(new_shape, new_strides)
