@@ -805,7 +805,6 @@ class Conv(TensorOp):
         """
         Emit tensor expression for the conv2d operation.
         """
-        print(f"Conv2D: {node.inputs[0].shape} {node.inputs[1].shape}")
         A = node_map[node.inputs[0]]  # Input tensor
         B = node_map[node.inputs[1]]  # Filter tensor
 
@@ -816,11 +815,7 @@ class Conv(TensorOp):
 
         # Define the TE function
         def te_conv(A, B):
-            return topi.nn.conv2d_nchw(
-                topi.transpose(A, axes=(0, 3, 1, 2)),
-                B, 
-                stride=stride, padding=padding, dilation=dilation
-            )
+            return topi.nn.conv2d_nhwc(A, B, stride=stride, padding=padding, dilation=dilation)
 
         # Emit the TE operation
         return bb.emit_te(te_conv, A, B)
