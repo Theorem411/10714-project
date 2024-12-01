@@ -817,7 +817,7 @@ class Conv(TensorOp):
         def te_conv(A, B):
             return topi.nn.conv2d_nchw(
                 topi.transpose(A, axes=(0, 3, 1, 2)),
-                topi.transpose(B, axes=(3, 2, 0, 1)),
+                B, 
                 stride=stride, padding=padding, dilation=dilation
             )
 
