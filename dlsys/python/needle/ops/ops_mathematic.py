@@ -136,7 +136,20 @@ class PowerScalar(TensorOp):
         ### BEGIN YOUR SOLUTION
         return (out_grad * self.grad,)
         ### END YOUR SOLUTION
+        
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        """
+        Emit tensor expression for raising a tensor to a scalar power.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = self.scalar  # Scalar exponent
 
+        # Define the TE function for power operation
+        def te_power_scalar(A):
+            return topi.power(A, tvm.tir.const(scalar, dtype=A.dtype))
+
+        # Emit the TE operation
+        return bb.emit_te(te_power_scalar, A)
 
 def power_scalar(a, scalar):
     return PowerScalar(scalar)(a)
