@@ -813,16 +813,13 @@ class Conv(TensorOp):
         padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
         dilation = (1, 1)  # Default dilation
 
-        # Convert input tensors from NCHW to NHWC
-        A_nhwc = bb.emit_te(lambda A: topi.transpose(A, axes=[0, 2, 3, 1]), A)
-        B_nhwc = bb.emit_te(lambda B: topi.transpose(B, axes=[0, 2, 3, 1]), B)
 
         # Define the TE function for NHWC convolution
         def te_conv(A, B):
             return topi.nn.conv2d_nhwc(A, B, stride=stride, padding=padding, dilation=dilation)
 
         # Perform the convolution in NHWC format
-        C_nhwc = bb.emit_te(te_conv, A_nhwc, B_nhwc)
+        C_nhwc = bb.emit_te(te_conv, A, B)
 
         # Convert the result back to NCHW format
         C_nchw = bb.emit_te(lambda C: topi.transpose(C, axes=[0, 3, 1, 2]), C_nhwc)
