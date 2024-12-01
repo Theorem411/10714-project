@@ -105,7 +105,7 @@ class ModelEval:
     module_ex = relax.build(ir_module, target=self.tvm_target)
     module_noopt = relax.VirtualMachine(module_ex, self.tvm_device)
     module_ex.export_library(self.module_path_noopt)
-    print(f"fully-optimized module exported to {self.module_path_noopt}")
+    print(f"noopt module exported to {self.module_path_noopt}")
     
     # optimize module: peephole optimization, operator fusion
     ir_module = self.opt_irmodule(ir_module)
@@ -115,7 +115,7 @@ class ModelEval:
     module_ex = relax.build(ir_module, target=self.tvm_target)
     module_fusion = relax.VirtualMachine(module_ex, self.tvm_device)
     module_ex.export_library(self.module_path_fusion)
-    print(f"fully-optimized module exported to {self.module_path_fusion}")
+    print(f"fusion-only module exported to {self.module_path_fusion}")
 
     # meta-scheduling
     with transform.PassContext(opt_level=4):
@@ -252,7 +252,8 @@ class ModelEval:
   def eval(self):
     # construct model
     self.model = self.construct_model()
-    
+    self.model.eval()
+
     # set module shared library save path
     self.module_path_noopt, self.module_path_fusion, self.module_path = self.module_save_path()
     

@@ -62,7 +62,8 @@ if __name__ == "__main__":
     #########################################################
     conv = ConvEval(
       config["input_dim"], config["num_batches"], config["batch_size"], 
-      config["in_channels"], config["out_channels"], config["input_height"], config["input_width"])
+      config["in_channels"], config["out_channels"], config["input_height"], config["input_width"],
+      recompile=args.recompile)
     conv.eval()
     
     #########################################################
