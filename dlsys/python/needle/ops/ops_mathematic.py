@@ -818,7 +818,12 @@ class Conv(TensorOp):
             return topi.nn.conv2d_nhwc(A, B, stride=stride, padding=padding, dilation=dilation)
 
         # Emit the TE operation
-        return bb.emit_te(te_conv, A, B)
+        C_nhwc = bb.emit_te(te_conv, A, B)
+
+        # Convert the result back to NCHW
+        C_nchw = bb.emit_te(lambda C: topi.transpose(C, axes=[0, 3, 1, 2]), C_nhwc)
+
+        return C_nchw
 
 
 def conv(a, b, stride=1, padding=1):
