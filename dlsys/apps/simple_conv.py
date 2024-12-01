@@ -64,7 +64,7 @@ def evaluate_batch_conv(model, module, X: np.ndarray):
     tvm_time = time.perf_counter() - start_time
 
     # assert np.allclose(tvm_out.asnumpy(), ndl_out.numpy(), atol=1e-4)
-    return tvm_time
+    return 0, tvm_time
 
 def evaluate_epoch_conv(model, module, input_shape, num_batches):
     model.eval()
