@@ -56,13 +56,15 @@ if __name__ == "__main__":
     #########################################################
     # Convolution Experiment
     #########################################################
-
+    conv = ConvEval(config["input_dim"], config["num_batches"], config["batch_size"])
+    conv.eval()
+    
     #########################################################
     # Transformer Experiment
     #########################################################
-    trans = TransformerEval(
-      config["input_dim"], config["num_batches"], config["batch_size"], 
-      config["input_dim"], config["seq_len"],
-      recompile=args.recompile
-    )
-    trans.eval()
+    # trans = TransformerEval(
+    #   config["input_dim"], config["num_batches"], config["batch_size"], 
+    #   config["input_dim"], config["seq_len"],
+    #   recompile=args.recompile
+    # )
+    # trans.eval()

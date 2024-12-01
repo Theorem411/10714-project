@@ -10,7 +10,7 @@ import needle.nn as nn
 
 from .model_eval import ModelEval
 
-# Fix Linear weight initialization: necessary for load_module to work
+# Fix weight initialization: necessary for load_module to work
 np.random.seed(4)
 
 class MLPModel(nn.Module):
