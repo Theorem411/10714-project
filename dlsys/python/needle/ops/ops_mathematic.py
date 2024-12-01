@@ -65,6 +65,20 @@ class AddScalar(TensorOp):
 
     def gradient(self, out_grad: Tensor, node: Tensor):
         return out_grad
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        """
+        Emit tensor expression for adding a scalar to a tensor.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor
+        scalar = self.scalar  # Scalar to add
+
+        # Define the TE function for scalar addition
+        def te_add_scalar(A):
+            return topi.add(A, tvm.tir.const(scalar, dtype=A.dtype))
+
+        # Emit the TE operation
+        return bb.emit_te(te_add_scalar, A)
 
 
 def add_scalar(a, scalar):
@@ -136,7 +150,7 @@ class PowerScalar(TensorOp):
         ### BEGIN YOUR SOLUTION
         return (out_grad * self.grad,)
         ### END YOUR SOLUTION
-        
+
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         """
         Emit tensor expression for raising a tensor to a scalar power.
