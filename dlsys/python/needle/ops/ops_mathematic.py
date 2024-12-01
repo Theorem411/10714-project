@@ -186,6 +186,20 @@ class EWiseDiv(TensorOp):
         return (a, b)
         ### END YOUR SOLUTION
 
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        """
+        Emit tensor expression for element-wise division.
+        """
+        A = node_map[node.inputs[0]]  # First input tensor
+        B = node_map[node.inputs[1]]  # Second input tensor
+
+        # Define the TE function for element-wise division
+        def te_ewise_div(A, B):
+            return topi.divide(A, B)
+
+        # Emit the TE operation
+        return bb.emit_te(te_ewise_div, A, B)
+
 
 def divide(a, b):
     return EWiseDiv()(a, b)
