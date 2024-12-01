@@ -129,9 +129,9 @@ if __name__ == "__main__":
     # Input tensor shape
     input_shape = (
         config["batch_size"],
-        config["in_channels"],
         config["input_height"],
         config["input_width"],
+        config["in_channels"],
     )
 
     #########################################################
