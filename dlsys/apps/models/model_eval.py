@@ -16,7 +16,10 @@ from tqdm.auto import tqdm
 
 class ModelEval:
   model: nn.Module
-  module: tvm.IRModule
+
+  module_noopt: tvm.IRModule
+  module_fusion:   tvm.IRModule
+  module:       tvm.IRModule
 
   # ndl_device: ndl.ndarray.BackendDevice
   # tvm_device: tvm.device
@@ -51,7 +54,13 @@ class ModelEval:
     #
     self.recompile = recompile
     self.model = None
+
     self.module = None
+    self.module_noopt = None
+    self.module_fusion = None
+
+    self.module_path_noopt = None
+    self.module_path_fusion = None
     self.module_path = None
 
   # @property
@@ -70,7 +79,13 @@ class ModelEval:
     current_file_path = os.path.dirname(os.path.abspath(__file__))  # Absolute path to the current script
     module_lib_path = os.path.join(current_file_path, "module_lib")
     os.makedirs(module_lib_path, exist_ok=True)
-    return os.path.join(module_lib_path, self.module_lib_save_name())
+
+    dso_name = self.module_lib_save_name()
+    dso_name_stripped, _ = os.path.splitext(dso_name)
+    return os.path.join(module_lib_path, dso_name_stripped + "_noopt.so"), \
+           os.path.join(module_lib_path, dso_name_stripped + "_fusion.so"), \
+           os.path.join(module_lib_path, dso_name)
+
   # must be overriden by children class
   def module_lib_save_name(self):
     raise NotImplementedError
@@ -86,11 +101,21 @@ class ModelEval:
     ir_module = to_tvm_tensor(self.model, True, ndl.Tensor(x, device=self.ndl_device))
     print('='*5 + " original module" + '='*5)
     ir_module.show()
+    # noopt
+    module_ex = relax.build(ir_module, target=self.tvm_target)
+    module_noopt = relax.VirtualMachine(module_ex, self.tvm_device)
+    module_ex.export_library(self.module_path_noopt)
+    print(f"fully-optimized module exported to {self.module_path_noopt}")
     
     # optimize module: peephole optimization, operator fusion
     ir_module = self.opt_irmodule(ir_module)
     print('='*5 + " transformed module" + '='*5)
     ir_module.show()
+    # fusion-only
+    module_ex = relax.build(ir_module, target=self.tvm_target)
+    module_fusion = relax.VirtualMachine(module_ex, self.tvm_device)
+    module_ex.export_library(self.module_path_fusion)
+    print(f"fully-optimized module exported to {self.module_path_fusion}")
 
     # meta-scheduling
     with transform.PassContext(opt_level=4):
@@ -98,14 +123,17 @@ class ModelEval:
       self.tune_tir_all(ir_module, max_trials=5, num_trials_per_iter=5)
       print('='*5 + " auto-tuned module " + '='*5)
       ir_module.show()
+    # auto-tuned
+    module_ex = relax.build(ir_module, target=self.tvm_target)
+    module = relax.VirtualMachine(module_ex, self.tvm_device)
     
     # build and export module as library
     module_ex = relax.build(ir_module, target=self.tvm_target)
     module_ex.export_library(self.module_path)
-    print(f"module exported to {self.module_path}")
+    print(f"fully-optimized module exported to {self.module_path}")
 
     module = relax.VirtualMachine(module_ex, self.tvm_device)
-    return module
+    return module_noopt, module_fusion, module
 
   # children class should override this function to provide model-specific optimizations
   def opt_irmodule(self, ir_module: tvm.IRModule):
@@ -164,7 +192,7 @@ class ModelEval:
   
 
   ### performance evaluation              #####################################
-  def eval_batch(self, X: np.ndarray):
+  def eval_batch(self, X: np.ndarray, mode=None):
     # input tensor wrapper
     input_ndl = ndl.Tensor(X, device=self.ndl_device, requires_grad=False, placeholder=True)
     input_tvm = tvm.nd.array(X)
@@ -174,10 +202,21 @@ class ModelEval:
     ndl_out = self.model(input_ndl)
     ndl_time = time.perf_counter() - start_time
 
-    start_time = time.perf_counter()
-    tvm_out = self.module["main"](input_tvm)
-    tvm_time = time.perf_counter() - start_time
-    
+    if mode == "noopt":
+      start_time = time.perf_counter()
+      tvm_out = self.module_noopt["main"](input_tvm)
+      tvm_time = time.perf_counter() - start_time
+    elif mode == "fusion":
+      start_time = time.perf_counter()
+      tvm_out = self.module_fusion["main"](input_tvm)
+      tvm_time = time.perf_counter() - start_time
+    elif mode == "optimized": 
+      start_time = time.perf_counter()
+      tvm_out = self.module["main"](input_tvm)
+      tvm_time = time.perf_counter() - start_time
+    else: 
+      raise ValueError("eval_batch must use a valid mode")
+
     # correctness test: 
     try: 
       assert np.allclose(tvm_out.asnumpy(),ndl_out.numpy(), atol=1e-4) # tweak tolerance if fails
@@ -189,25 +228,7 @@ class ModelEval:
 
     return ndl_time, tvm_time
 
-  def eval(self):
-    # construct model
-    self.model = self.construct_model()
-
-    # translate model to tvm irmodule and save as shared library
-    self.module_path = self.module_save_path()
-    
-    try: 
-      if not self.recompile:
-        module_ex = tvm.runtime.load_module(self.module_path)
-        self.module = relax.VirtualMachine(module_ex, self.tvm_device)
-        print(f"module reloaded from {self.module_path}")
-      else:
-        self.module = self.compile_model()
-        print(f"module recompiled")
-    except ValueError: 
-      self.module = self.compile_model()
-      print(f"module compiled")
-
+  def eval_epoch(self, mode=None):
     # !NECESSARY: fix all rand seed to pass correctness after module reload
     np.random.seed(4)
 
@@ -220,10 +241,44 @@ class ModelEval:
     for _ in range(self.num_batches):
         # set needle model to forward mode
         X = self.dummy_input()
-        ndl_batch_time, tvm_batch_time = self.eval_batch(X)
+        ndl_batch_time, tvm_batch_time = self.eval_batch(X, mode=mode)
 
         ndl_time += ndl_batch_time
         tvm_time += tvm_batch_time
     
     avg_ndl_time, avg_tvm_time = ndl_time / self.num_batches, tvm_time / self.num_batches
-    print(f'\n\n\n {"-"*50} \nAVG NDL TIME: {avg_ndl_time} \tAVG TVM TIME: {avg_tvm_time}')
+    print(f'\n\n\n mode={mode}:\n{"-"*50} \nAVG NDL TIME: {avg_ndl_time} \tAVG TVM TIME: {avg_tvm_time}')
+
+  def eval(self):
+    # construct model
+    self.model = self.construct_model()
+    
+    # set module shared library save path
+    self.module_path_noopt, self.module_path_fusion, self.module_path = self.module_save_path()
+    
+    # translate model to tvm irmodule and save as shared library
+    try: 
+      if not self.recompile:
+
+        module_ex = tvm.runtime.load_module(self.module_path_noopt)
+        self.module_noopt = relax.VirtualMachine(module_ex, self.tvm_device)
+        print(f"module reloaded from {self.module_path_noopt}")
+
+        module_ex = tvm.runtime.load_module(self.module_path_fusion)
+        self.module_fusion = relax.VirtualMachine(module_ex, self.tvm_device)
+        print(f"module reloaded from {self.module_path_fusion}")
+
+        module_ex = tvm.runtime.load_module(self.module_path)
+        self.module = relax.VirtualMachine(module_ex, self.tvm_device)
+        print(f"module reloaded from {self.module_path}")
+      else:
+        self.module_noopt, self.module_fusion, self.module = self.compile_model()
+        print(f"module recompiled")
+    except ValueError: 
+      self.module_noopt, self.module_fusion, self.module = self.compile_model()
+      print(f"module compiled")
+
+    # do a performance evaluation
+    self.eval_epoch(mode="noopt")
+    self.eval_epoch(mode="fusion")
+    self.eval_epoch(mode="optimized")
