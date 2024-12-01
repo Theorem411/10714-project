@@ -805,7 +805,7 @@ class Conv(TensorOp):
         """
         Emit tensor expression for the conv2d operation.
         """
-        A = node_map[node.inputs[0]]  # Input tensor
+        A = node_map[node.inputs[0]]  # Input tensor, nhwc
         B = node_map[node.inputs[1]]  # Filter tensor
 
         # Handle stride and padding
