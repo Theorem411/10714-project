@@ -211,9 +211,9 @@ class BatchNorm1d(Module):
           return res
         else: 
           print(f"x shape: {x.shape}, running_mean shape: {self.running_mean.shape}, running_var shape: {self.running_var.shape}")
-          x_minus_u = x - self.running_mean # ops.add(x, ops.negate(self.running_mean))
+          x_minus_u = x - self.running_mean.reshape((1, self.running_mean.shape[0])) # ops.add(x, ops.negate(self.running_mean))
 
-          x_std = x_minus_u / ((self.running_var + self.eps)**0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(self.running_var, self.eps), 0.5))
+          x_std = x_minus_u / ((self.running_var.reshape((1, self.running_var[0])) + self.eps)**0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(self.running_var, self.eps), 0.5))
           res = self.weight * x_std + self.bias
 
           return res
