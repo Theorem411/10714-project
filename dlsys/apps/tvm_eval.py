@@ -45,6 +45,10 @@ if __name__ == "__main__":
         "batch_size" :  8,
         "n_layers":     5,   
         "seq_len"   :  10,
+        "in_channels": 3,
+        "out_channels": 16,
+        "input_height": 32,
+        "input_width": 32,
     }
 
     #########################################################
@@ -56,7 +60,9 @@ if __name__ == "__main__":
     #########################################################
     # Convolution Experiment
     #########################################################
-    conv = ConvEval(config["input_dim"], config["num_batches"], config["batch_size"])
+    conv = ConvEval(
+      config["input_dim"], config["num_batches"], config["batch_size"], 
+      config["in_channels"], config["out_channels"], config["input_height"], config["input_width"])
     conv.eval()
     
     #########################################################

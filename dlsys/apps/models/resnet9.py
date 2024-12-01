@@ -62,7 +62,7 @@ class ResNet9(ndl.nn.Module):
 ################################################################################
 class ConvEval(ModelEval):
   def __init__(self, input_dim, num_batches, batch_size, 
-               in_channels, out_channels, 
+               in_channels, out_channels, input_height, input_width,
                device="cpu", recompile=False):
 
     # input_dim, num_batches, batch_size not used
