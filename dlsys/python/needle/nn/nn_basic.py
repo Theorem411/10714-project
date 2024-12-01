@@ -284,6 +284,7 @@ class BatchNorm2d(BatchNorm1d):
         _x = x.transpose((1, 2)).transpose((2, 3)).reshape((s[0] * s[2] * s[3], s[1]))
         print(f"_x shape: {_x.shape}")
         y = super().forward(_x).reshape((s[0], s[2], s[3], s[1]))
+        print(f"y shape: {y.shape}")
 
         res = y.transpose((2,3)).transpose((1,2))
         return res
