@@ -129,9 +129,9 @@ if __name__ == "__main__":
     # Input tensor shape
     input_shape = (
         config["batch_size"],
+        config["in_channels"],
         config["input_height"],
         config["input_width"],
-        config["in_channels"],
     )
 
     #########################################################
@@ -154,7 +154,6 @@ if __name__ == "__main__":
 
     x = np.random.rand(*input_shape).astype(np.float32)
     print(f"Input shape: {x.shape}")
-    torch_input = torch.tensor(x)
     tvm_input = tvm.nd.array(x)
 
     module = to_tvm_tensor(model, True, ndl.Tensor(x, device=config["device"]))
