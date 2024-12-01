@@ -210,7 +210,7 @@ class BatchNorm1d(Module):
           # print(f"BatchNorm 0 res.dtype: {res.dtype}")
           return res
         else: 
-        
+          print(f"x shape: {x.shape}, running_mean shape: {self.running_mean.shape}, running_var shape: {self.running_var.shape}")
           x_minus_u = x - self.running_mean # ops.add(x, ops.negate(self.running_mean))
 
           x_std = x_minus_u / ((self.running_var + self.eps)**0.5) # ops.divide(x_minus_u, ops.power_scalar(ops.add_scalar(self.running_var, self.eps), 0.5))
