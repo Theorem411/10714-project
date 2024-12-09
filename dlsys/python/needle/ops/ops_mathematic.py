@@ -811,7 +811,23 @@ class Conv(TensorOp):
         ### END YOUR SOLUTION
   
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-      raise NotImplementedError
+        """
+        Emit tensor expression for the conv2d operation.
+        """
+        A = node_map[node.inputs[0]]  # Input tensor, nhwc
+        B = node_map[node.inputs[1]]  # Filter tensor
+
+        # Handle stride and padding
+        stride = (self.stride, self.stride) if isinstance(self.stride, int) else self.stride
+        padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
+        dilation = (1, 1)  # Default dilation
+
+        # Define the TE function
+        def te_conv(A, B):
+            return topi.nn.conv2d_nhwc(A, B, stride=stride, padding=padding, dilation=dilation)
+
+        # Emit the TE operation
+        return bb.emit_te(te_conv, A, B)
 
 def conv(a, b, stride=1, padding=1):
     return Conv(stride, padding)(a, b)
