@@ -33,7 +33,7 @@ class EWiseAdd(TensorOp):
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
-        
+
         def te_ewise_add(A, B):
             return topi.add(A, B)
 
@@ -139,7 +139,7 @@ class EWisePow(TensorOp):
         dy = power(x, y) * log(x)
         return (out_grad*dx, out_grad*dy)
         ### END YOUR SOLUTION
-
+    
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
@@ -170,7 +170,7 @@ class PowerScalar(TensorOp):
         ### BEGIN YOUR SOLUTION
         return (out_grad * self.grad,)
         ### END YOUR SOLUTION
-
+    
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]  # Input tensor
         scalar = self.scalar
@@ -179,6 +179,7 @@ class PowerScalar(TensorOp):
             return topi.power(A, scalar)
 
         return bb.emit_te(te_power_scalar, A)
+
 
 def power_scalar(a, scalar):
     return PowerScalar(scalar)(a)
@@ -200,7 +201,7 @@ class EWiseDiv(TensorOp):
         b = out_grad * self.grad_b
         return (a, b)
         ### END YOUR SOLUTION
-
+    
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]
         B = node_map[node.inputs[1]]
@@ -228,7 +229,7 @@ class DivScalar(TensorOp):
         ### BEGIN YOUR SOLUTION
         return (out_grad / self.scalar,)
         ### END YOUR SOLUTION
-
+    
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
         A = node_map[node.inputs[0]]  # Input tensor
         scalar = self.scalar
@@ -265,7 +266,7 @@ class Transpose(TensorOp):
         ### BEGIN YOUR SOLUTION
         return transpose(out_grad, self.axes)
         ### END YOUR SOLUTION
-
+    
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
     
         A = node_map[node.inputs[0]]   
@@ -535,6 +536,14 @@ class Exp(TensorOp):
         ### BEGIN YOUR SOLUTION
         return out_grad * exp(node.inputs[0])
         ### END YOUR SOLUTION
+    
+    def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
+        A = node_map[node.inputs[0]]  # Input tensor
+
+        def te_exp(A):
+            return topi.exp(A)  # Compute element-wise exponential
+
+        return bb.emit_te(te_exp, A)
 
 
 def exp(a):
@@ -802,24 +811,7 @@ class Conv(TensorOp):
         ### END YOUR SOLUTION
   
     def emit_te(self, bb: relax.BlockBuilder, node_map: Dict[Tensor, relax.Var], node: Tensor) -> relax.Var:
-        """
-        Emit tensor expression for the conv2d operation.
-        """
-        A = node_map[node.inputs[0]]  # Input tensor
-        B = node_map[node.inputs[1]]  # Filter tensor
-
-        # Handle stride and padding
-        stride = (self.stride, self.stride) if isinstance(self.stride, int) else self.stride
-        padding = (self.padding, self.padding) if isinstance(self.padding, int) else self.padding
-        dilation = (1, 1)  # Default dilation
-
-        # Define the TE function
-        def te_conv(A, B):
-            return topi.nn.conv2d_nhwc(A, B, stride=stride, padding=padding, dilation=dilation)
-
-        # Emit the TE operation
-        return bb.emit_te(te_conv, A, B)
-
+      raise NotImplementedError
 
 def conv(a, b, stride=1, padding=1):
     return Conv(stride, padding)(a, b)

@@ -167,7 +167,7 @@ class ModelEval:
     # save metascheduling tuning log at
     current_file_path = os.path.dirname(os.path.abspath(__file__))  # Absolute path to the current script
     work_dir = os.path.join(current_file_path, work_dir)
-    os.makedirs(work_dir)
+    os.makedirs(work_dir, exist_ok=True)
     
     # Iterate over all functions in the IRModule
     funcs = 0
