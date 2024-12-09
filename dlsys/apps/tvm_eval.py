@@ -14,7 +14,6 @@ from needle_tvm import to_tvm_tensor, to_tvm_fx
 
 import needle.nn as nn
 from models import MLPEval, ConvEval, TransformerEval
-from utils import *
 
 np.random.seed(0)
 
