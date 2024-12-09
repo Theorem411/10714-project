@@ -235,7 +235,7 @@ class Dropout(Module):
             scale_factor = 1-self.p
         
         else:
-            mask = init.randb(*x.shape, p=1.0) 
+            mask = init.randb(*x.shape, p=1.0, device=x.device, dtype=x.dtype) 
             scale_factor = 1.0
         
         return (x*mask) / scale_factor

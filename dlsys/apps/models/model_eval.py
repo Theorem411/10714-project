@@ -176,7 +176,12 @@ class ModelEval:
   ### metaschedule tuning                  #####################################
   def tune_tir_all(self, ir_module, max_trials=64, num_trials_per_iter=64, work_dir="tune_tmp", max_funcs=None):
     # add number of cores for loop parallelization
-    target = self.tvm_target + f" -num-cores={self.cores}"
+    if self.tvm_target == "llvm":
+      target = self.tvm_target + f" -num-cores={self.cores}"
+    elif self.tvm_target == "cuda":
+      target = self.tvm_target + f" -arch=sm_75"
+    else: 
+      raise NotImplementedError
     print(f"tune_tir_all: target={target}")
 
     # save metascheduling tuning log at
