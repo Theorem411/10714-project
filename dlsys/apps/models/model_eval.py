@@ -112,12 +112,13 @@ class ModelEval:
     
     # apply dlight for cuda target
     if self.tvm_target == "cuda": 
+      print(f"tvm_target={self.tvm_target}: enable dlight.ApplyDefaultSchedule")
       with tvm.target.Target(self.tvm_target):
         ir_module = dlight.ApplyDefaultSchedule(
             dlight.gpu.Matmul(),
-            # dlight.gpu.GEMV(),
-            # dlight.gpu.Reduction(),
-            # dlight.gpu.GeneralReduction(),
+            dlight.gpu.GEMV(),
+            dlight.gpu.Reduction(),
+            dlight.gpu.GeneralReduction(),
             dlight.gpu.Fallback(),
         )(ir_module)
 
@@ -164,16 +165,12 @@ class ModelEval:
     return pipeline(ir_module)
 
   def _default_pipeline(self):
-    pipeline = [
+    return tvm.ir.transform.Sequential([
       tvm.relax.transform.LegalizeOps(),
       tvm.relax.transform.AnnotateTIROpPattern(),
-      relax.transform.FoldConstant(),
       tvm.relax.transform.FuseOps(),
       tvm.relax.transform.FuseTIR(),
-      # Phase 3. Passes on TIR
-      relax.transform.DeadCodeElimination(),
-    ]
-    return tvm.ir.transform.Sequential(pipeline)
+    ])
 
 
   ### metaschedule tuning                  #####################################
@@ -227,21 +224,16 @@ class ModelEval:
   def eval_batch(self, X: np.ndarray, mode=None):
     # input tensor wrapper
     input_ndl = ndl.Tensor(X, device=self.ndl_device, requires_grad=False, placeholder=True)
-    input_tvm = tvm.nd.array(X)
+    input_tvm = tvm.nd.array(X, self.tvm_device)
     
     # performance
     start_time = time.perf_counter()
-    print(f"before self.model run: model={self.model}")
     ndl_out = self.model(input_ndl)
     ndl_time = time.perf_counter() - start_time
-    print(f"after self.model run: mode={mode}")
 
     if mode == "noopt":
       start_time = time.perf_counter()
-      print("before self.module_noopt is run")
       tvm_out = self.module_noopt["main"](input_tvm)
-      print("after self.module_noopt is run")
-
       tvm_time = time.perf_counter() - start_time
     elif mode == "fusion":
       start_time = time.perf_counter()
