@@ -24,7 +24,7 @@ We explored two ways to integrate `needle` with TVM. Both ways uses the `BlockBu
 <details>
 <summary> The translated IRModule: </summary>
 
-```[c]
+```py
 ===== original module=====
 # from tvm.script import ir as I
 # from tvm.script import tir as T
@@ -113,7 +113,7 @@ class Module:
 <details>
 <summary> Translated IRModule after operator fusion: </summary>
 
-```[c]
+```py
 # from tvm.script import ir as I
 # from tvm.script import tir as T
 # from tvm.script import relax as R
@@ -182,7 +182,7 @@ class Module:
 <details>
 <summary> The translated IRModule after Meta-scheduling </summary>
 
-```[c]
+```py
 # from tvm.script import ir as I
 # from tvm.script import tir as T
 # from tvm.script import relax as R

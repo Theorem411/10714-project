@@ -29,6 +29,12 @@ def getoptions():
     "-d", "--device",
     help="experiment on which device: cpu, cuda?",
   )
+  parser.add_argument(
+    "-m", "--model",
+    type=str,
+    default="mlp",
+    help="Specify the model to evaluate. Default is 'mlp'."
+  )
   args = parser.parse_args()
   return args
 
@@ -51,27 +57,24 @@ if __name__ == "__main__":
         "input_width": 32,
     }
 
-    #########################################################
-    # MLP Experiment
-    #########################################################
-    # mlp = MLPEval(config["input_dim"], config["num_batches"], config["batch_size"], config["n_layers"], recompile=args.recompile)
-    # mlp.eval()
-
-    #########################################################
-    # Convolution Experiment
-    #########################################################
-    conv = ConvEval(
-      config["input_dim"], config["num_batches"], config["batch_size"], 
-      config["in_channels"], config["out_channels"], config["input_height"], config["input_width"],
-      recompile=args.recompile)
-    conv.eval()
-    
-    #########################################################
-    # Transformer Experiment
-    #########################################################
-    # trans = TransformerEval(
-    #   config["input_dim"], config["num_batches"], config["batch_size"], 
-    #   config["input_dim"], config["seq_len"],
-    #   recompile=args.recompile
-    # )
-    # trans.eval()
+    if args.model == "mlp": 
+      # MLP Experiment
+      mlp = MLPEval(config["input_dim"], config["num_batches"], config["batch_size"], config["n_layers"], recompile=args.recompile)
+      mlp.evaluate_performance()
+    elif args.model == "conv":
+      # Convolution Experiment
+      conv = ConvEval(
+        config["input_dim"], config["num_batches"], config["batch_size"], 
+        config["in_channels"], config["out_channels"], config["input_height"], config["input_width"],
+        recompile=args.recompile)
+      conv.evaluate_performance()
+    elif args.model == "transformer":
+      # Transformer Experiment
+      trans = TransformerEval(
+        config["input_dim"], config["num_batches"], config["batch_size"], 
+        config["input_dim"], config["seq_len"],
+        recompile=args.recompile
+      )
+      trans.evaluate_performance()
+    else: 
+      raise NotImplementedError

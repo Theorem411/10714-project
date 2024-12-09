@@ -71,7 +71,10 @@ class ModelEval:
   # def module():
   #   return module
 
-  # must be overriden by children class
+  #############################################
+  # OVERWRITE: implemented by model author
+  #    returns user-defined model
+  #############################################
   def construct_model(self): 
     raise NotImplementedError
 
@@ -86,11 +89,17 @@ class ModelEval:
            os.path.join(module_lib_path, dso_name_stripped + "_fusion.so"), \
            os.path.join(module_lib_path, dso_name)
 
-  # must be overriden by children class
+ #############################################
+  # OVERWRITE: implemented by model author
+  #    define where to save compiled module executable
+  #############################################
   def module_lib_save_name(self):
     raise NotImplementedError
 
-  # can be override for different model input data type
+  #############################################
+  # OVERWRITE: implemented by model author
+  #    define an example input Tensor (used in model forward pass)
+  #############################################
   def dummy_input(self):
     raise NotImplementedError
 
@@ -150,10 +159,15 @@ class ModelEval:
 
 
   ### metaschedule tuning                  #####################################
-  def tune_tir_all(self, ir_module, max_trials=64, num_trials_per_iter=64, work_dir="./tune_tmp", max_funcs=None):
-    # add number of cores
+  def tune_tir_all(self, ir_module, max_trials=64, num_trials_per_iter=64, work_dir="tune_tmp", max_funcs=None):
+    # add number of cores for loop parallelization
     target = self.tvm_target + f" -num-cores={self.cores}"
     print(f"tune_tir_all: target={target}")
+
+    # save metascheduling tuning log at
+    current_file_path = os.path.dirname(os.path.abspath(__file__))  # Absolute path to the current script
+    work_dir = os.path.join(current_file_path, work_dir)
+    os.makedirs(work_dir)
     
     # Iterate over all functions in the IRModule
     funcs = 0
@@ -249,7 +263,7 @@ class ModelEval:
     avg_ndl_time, avg_tvm_time = ndl_time / self.num_batches, tvm_time / self.num_batches
     print(f'\n\n\n mode={mode}:\n{"-"*50} \nAVG NDL TIME: {avg_ndl_time} \tAVG TVM TIME: {avg_tvm_time}')
 
-  def eval(self):
+  def evaluate_performance(self):
     # construct model
     self.model = self.construct_model()
     self.model.eval()
