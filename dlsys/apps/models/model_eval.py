@@ -1,6 +1,6 @@
 import numpy as np
 import tvm
-from tvm import relax, transform, meta_schedule
+from tvm import dlight, relax, transform, meta_schedule
 from tvm import ir
 
 import sys
@@ -46,7 +46,7 @@ class ModelEval:
       self.tvm_target = "llvm"
     elif device == "cuda":
       self.ndl_device = ndl.cuda()
-      self.tvm_device = tvm.cuda()
+      self.tvm_device = tvm.cuda(0)
       self.tvm_target = "cuda"
     else: 
       raise NotImplementedError
@@ -107,9 +107,23 @@ class ModelEval:
   def compile_model(self):
     x = self.dummy_input()
     # generate new tvm IRModule using Tensor graph
-    ir_module = to_tvm_tensor(self.model, True, ndl.Tensor(x, device=self.ndl_device))
+    te = True # if self.tvm_device == tvm.cpu() else False
+    ir_module = to_tvm_tensor(self.model, te, ndl.Tensor(x, device=self.ndl_device))
+    
+    # apply dlight for cuda target
+    if self.tvm_target == "cuda": 
+      with tvm.target.Target(self.tvm_target):
+        ir_module = dlight.ApplyDefaultSchedule(
+            dlight.gpu.Matmul(),
+            # dlight.gpu.GEMV(),
+            # dlight.gpu.Reduction(),
+            # dlight.gpu.GeneralReduction(),
+            dlight.gpu.Fallback(),
+        )(ir_module)
+
     print('='*5 + " original module" + '='*5)
     ir_module.show()
+
     # noopt
     module_ex = relax.build(ir_module, target=self.tvm_target)
     module_noopt = relax.VirtualMachine(module_ex, self.tvm_device)
@@ -150,12 +164,16 @@ class ModelEval:
     return pipeline(ir_module)
 
   def _default_pipeline(self):
-    return tvm.ir.transform.Sequential([
+    pipeline = [
       tvm.relax.transform.LegalizeOps(),
       tvm.relax.transform.AnnotateTIROpPattern(),
+      relax.transform.FoldConstant(),
       tvm.relax.transform.FuseOps(),
       tvm.relax.transform.FuseTIR(),
-    ])
+      # Phase 3. Passes on TIR
+      relax.transform.DeadCodeElimination(),
+    ]
+    return tvm.ir.transform.Sequential(pipeline)
 
 
   ### metaschedule tuning                  #####################################
@@ -213,12 +231,17 @@ class ModelEval:
     
     # performance
     start_time = time.perf_counter()
+    print(f"before self.model run: model={self.model}")
     ndl_out = self.model(input_ndl)
     ndl_time = time.perf_counter() - start_time
+    print(f"after self.model run: mode={mode}")
 
     if mode == "noopt":
       start_time = time.perf_counter()
+      print("before self.module_noopt is run")
       tvm_out = self.module_noopt["main"](input_tvm)
+      print("after self.module_noopt is run")
+
       tvm_time = time.perf_counter() - start_time
     elif mode == "fusion":
       start_time = time.perf_counter()
