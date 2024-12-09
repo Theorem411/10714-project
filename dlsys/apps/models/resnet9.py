@@ -77,7 +77,7 @@ class ConvEval(ModelEval):
   
   # !IMPORTANT
   def construct_model(self): 
-    return ResNet9()
+    return ResNet9(device=self.ndl_device)
 
   # overrides default
   def dummy_input(self):
