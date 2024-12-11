@@ -10,13 +10,114 @@ This directory contains our semester-long project for Deep Learning System (cour
 - Data loader and dataset modules
 - Reverse mode autodifferentiation (Reverse AD) and optimizer module (we support SGD and Adam)
 
-Our final project extends `needle` with integration to the widely-adoped ML compilation framework Apache TVM.
+Our final project extends `needle` with integration to the widely-adoped ML compilation framework Apache TVM. Here's what we extended:
 
-### `backend_ndarray`
+```
+python/
+├── needle/
+│   ├── ops/
+│   │   └── ops_mathematics.py     
+│   └── needle_tvm/
+│       └── to_tvm.py             
+apps/
+├── tvm_eval.py                    
+└── models/
+    ├── mlp.py                     
+    ├── resnet9.py                 
+    ├── transformer.py             
+    └── model_eval.py             
+```
+
+### `apps`
+- [tvm_eval.py](./dlsys/apps/tvm_eval.py)  
+    - Parses experiment arguments and settings for running evaluations
+- [mlp.py](./dlsys/apps/models/mlp.py)
+    - Defines the performance evaluation wrapper class for an MLP model
+- [resnet9.py](./dlsys/apps/models/resnet9.py)
+    - Defines the performance evaluation wrapper class for the ResNet9
+- [transformer.py](./dlsys/apps/models/transformer.py)
+    - Defines the performance evaluation wrapper class for a Transformer
+- [model_eval.py](./dlsys/apps/models/model_eval.py)
+    - Sets up model evaluation procedures and defines an auto-tuning method
+### `Needle Backend`
+- [ops_mathematics.py](./dlsys/python/needle/ops/ops_mathematic.py)
+    - Extends the TensorOps class by adding the emit_te and emit methods
+    - Constructs computation blocks in Relax IR using the BlockBuilder API
+### `Needle TVM Extension`
+- [to_tvm.py](./dlsys/python/needle_tvm/to_tvm.py)
+    - Implements the to_tvm_tensor function to translate a computational graph into a Relax IR module
+    - Performs topological tracing to ensure proper IR module construction
+
+<!-- ### `backend_ndarray`
 ### `autograd` and `optim`
 ### `nn` and `init`
-### `data`
+### `data` -->
 ### Example
+#### Environment Setup
+In the Google colab, mount your Google Drive and clone the Repository
+```
+from google.colab import drive
+drive.mount('/content/drive')
+%cd /content/drive/MyDrive/
+!mkdir -p 10714
+%cd 10714
+!git clone https://github.com/Theorem411/10714-project
+%cd /content/drive/MyDrive/10714/10714-project/
+!pip3 install pybind11
+```
+We recommend to install the package version of TVM from [mlc.ai](https://mlc.ai/chapter_tensor_program/case_study.html#install-packages)
+```
+python -m pip install --pre -U -f https://mlc.ai/wheels mlc-ai-nightly-cu122
+python -c "from tvm import relax"
+``` 
+Set enviroment variables and Build the project
+```
+%set_env PYTHONPATH ./dlsys/python
+%set_env NEEDLE_BACKEND nd
+
+%cd /content/drive/MyDrive/10714/10714-project/dlsys
+!make clean && make
+```
+#### Benchmark on CPU
+**_Note:_** meta scheduling for `Transformer` and `ResNet9` model might take rounghly **_10-15 minutes_** to finish on the first run. However, since we reload the compiled module executable, the second time would be significantly faster as we bypass the meta scheduler.
+
+If you want to recompile the model, add `-r` flag when running `tvm_eval.py`.
+
+**MLP Performance**  
+```
+%cd /content/drive/MyDrive/10714/10714-project/dlsys/apps/
+!python tvm_eval.py -m='mlp' -d='cpu'
+```
+**Transformer Performance**
+```
+%cd /content/drive/MyDrive/10714/10714-project/dlsys/apps/
+!python tvm_eval.py -m='transformer' -d='cpu'
+```
+**ResNet9 Performance**
+```
+%cd /content/drive/MyDrive/10714/10714-project/dlsys/apps/
+!python tvm_eval.py -m='conv' -d='cpu'
+```
+#### Benchmark on GPU
+To check if TVM have `USE_CUDA` turned on. You can run the following command and search for `USE_CUDA`.
+```
+!python -c "import tvm; print('\n'.join(f'{k}: {v}' for k, v in tvm.support.libinfo().items()))"
+```
+**MLP Performance**  
+```
+%cd /content/drive/MyDrive/10714/10714-project/dlsys/apps/
+!python tvm_eval.py -m='mlp' -d='cuda'
+```
+**Transformer Performance**
+```
+%cd /content/drive/MyDrive/10714/10714-project/dlsys/apps/
+!python tvm_eval.py -m='transformer' -d='cuda'
+```
+**ResNet9 Performance**
+```
+%cd /content/drive/MyDrive/10714/10714-project/dlsys/apps/
+!python tvm_eval.py -m='conv' -d='cuda'
+```
 
 ## Final Project: Integration with TVM
 We explored two ways to integrate `needle` with TVM. Both ways uses the `BlockBuilder` API in `tvm.relax` to generate `IRModule` from `needle` models.
